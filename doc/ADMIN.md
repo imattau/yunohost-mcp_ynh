@@ -1,6 +1,8 @@
 ## Connecting an MCP client
 
-Point your MCP client (Claude, Codex, or any MCP-over-Streamable-HTTP client) at `https://your-domain/mcp`. It authenticates every request with a [NIP-98](https://github.com/nostr-protocol/nips/blob/master/98.md) signed event using its own Nostr key — there's no username/password and no YunoHost SSO involved. The pubkey it signs with must be in `identity.toml` (see below) with a role that grants what it's trying to do, or every call is rejected.
+Every request to `https://your-domain/mcp` authenticates with a [NIP-98](https://github.com/nostr-protocol/nips/blob/master/98.md) signed event using its own Nostr key — there's no username/password and no YunoHost SSO involved. The pubkey it signs with must be in `identity.toml` (see below) with a role that grants what it's trying to do, or every call is rejected.
+
+Mainstream clients (Claude Desktop, Codex CLI, etc.) can't sign that header themselves, so point them at `yunohost-mcp-connect` (installed alongside the server, in this app's own venv) instead of the URL directly — see the upstream [README](https://github.com/imattau/yunohost-mcp/blob/master/README.md#connecting-claude-desktop-or-codex) for exact `claude_desktop_config.json`/`config.toml` snippets.
 
 ## Granting access: identity.toml
 
