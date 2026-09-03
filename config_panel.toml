@@ -27,6 +27,53 @@ services = []
         style = "info"
         # Filled dynamically by get__identities_summary in scripts/config.
 
+    [access.edit]
+    name.en = "Edit an existing identity"
+    name.fr = "Modifier une identité existante"
+    help.en = "Changes an existing identity.toml entry in place - no need to revoke and re-grant to change a role, name, or expiry. Effective immediately, no restart needed. Leave a field blank (or 'keep current' for role) to leave it unchanged; for expiry, type 'clear' to remove an existing expiry."
+    help.fr = "Modifie une entrée identity.toml existante sur place - inutile de révoquer puis ré-accorder pour changer un rôle, un nom ou une expiration. Effectif immédiatement, aucun redémarrage requis. Laissez un champ vide (ou « keep current » pour le rôle) pour le laisser inchangé ; pour l'expiration, tapez « clear » pour la supprimer."
+
+        [access.edit.edit_npub]
+        ask.en = "Agent's npub to edit"
+        ask.fr = "npub de l'agent à modifier"
+        type = "string"
+        optional = true
+        bind = "null"
+        example = "npub1sn0wdenkukak0d9dfczzeacvhkrgz92ak56egt7vdgzn8pv2wfqqhrjdv9"
+        pattern.regexp = '^$|^npub1[a-z0-9]{20,}$'
+        pattern.error = "Must be a valid npub1... Nostr public key"
+
+        [access.edit.edit_name]
+        ask.en = "New display name (leave blank to keep current)"
+        ask.fr = "Nouveau nom affiché (laisser vide pour conserver l'actuel)"
+        type = "string"
+        optional = true
+        bind = "null"
+
+        [access.edit.edit_role]
+        ask.en = "New role"
+        ask.fr = "Nouveau rôle"
+        type = "select"
+        choices = ["(keep current)", "readonly", "operator", "app-admin", "package-developer", "administrator"]
+        default = "(keep current)"
+        bind = "null"
+        help.en = "See PLAN.md / src/yunohost_mcp/policy/roles.py upstream for exactly which scopes each role grants."
+
+        [access.edit.edit_expires]
+        ask.en = "New expiry (YYYY-MM-DD, 'clear' to remove, or blank to keep current)"
+        ask.fr = "Nouvelle expiration (AAAA-MM-JJ, « clear » pour supprimer, ou vide pour conserver l'actuelle)"
+        type = "string"
+        optional = true
+        bind = "null"
+        pattern.regexp = '^$|^clear$|^\d{4}-\d{2}-\d{2}$'
+        pattern.error = "Use YYYY-MM-DD, 'clear' to remove expiry, or leave blank to keep current"
+
+        [access.edit.do_edit]
+        ask.en = "Save changes"
+        ask.fr = "Enregistrer les modifications"
+        type = "button"
+        style = "success"
+
     [access.grant]
     name.en = "Grant a new identity"
     name.fr = "Accorder une nouvelle identité"

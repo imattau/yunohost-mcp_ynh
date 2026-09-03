@@ -79,7 +79,7 @@ def cmd_grant(identity_path: str, npub: str, name: str, role: str, expires: str)
     path = Path(identity_path)
     identities = _load(path)
     if npub in identities:
-        sys.exit(f"{npub} is already granted - revoke it first to change its role, name, or expiry")
+        sys.exit(f"{npub} is already granted - use Edit an existing identity instead to change its role, name, or expiry")
 
     block = f'\n[identity."{npub}"]\nname = {json.dumps(name or npub)}\nroles = [{json.dumps(role)}]\n'
     if expires:
@@ -87,6 +87,50 @@ def cmd_grant(identity_path: str, npub: str, name: str, role: str, expires: str)
     with path.open("a") as f:
         f.write(block)
     print(f"granted {role} to {npub}")
+
+
+def cmd_edit(identity_path: str, npub: str, name: str, role: str, expires: str) -> None:
+    from yunohost_mcp.auth.npub import Bech32Error, npub_to_hex
+    from yunohost_mcp.policy.roles import ROLE_SCOPES
+
+    try:
+        npub_to_hex(npub)
+    except Bech32Error as exc:
+        sys.exit(f"invalid npub: {exc}")
+
+    path = Path(identity_path)
+    identities = _load(path)
+    if npub not in identities:
+        sys.exit(f"{npub} is not currently granted - use Grant a new identity instead")
+
+    entry = dict(identities[npub])
+    current_roles = entry.get("roles", [])
+
+    if role:
+        if role not in ROLE_SCOPES:
+            sys.exit(f"unknown role: {role!r}; known roles: {sorted(ROLE_SCOPES)}")
+        if "administrator" in current_roles and role != "administrator":
+            others = {k: v for k, v in identities.items() if k != npub}
+            remaining_admins = [k for k, v in others.items() if "administrator" in v.get("roles", [])]
+            if not remaining_admins:
+                sys.exit(
+                    "refusing to demote the last administrator identity - this would lock every "
+                    "agent out of privileged access; edit identity.toml directly over SSH if this "
+                    "is genuinely intended (see doc/ADMIN.md)"
+                )
+        entry["roles"] = [role]
+
+    if name:
+        entry["name"] = name
+
+    if expires == "clear":
+        entry.pop("expires", None)
+    elif expires:
+        entry["expires"] = expires + "T00:00:00+00:00"
+
+    identities[npub] = entry
+    path.write_text(_serialize(identities))
+    print(f"updated {npub}")
 
 
 def cmd_revoke(identity_path: str, npub: str) -> None:
@@ -127,6 +171,7 @@ def cmd_set_revoked(revoked_path: str, ids_csv: str) -> None:
 COMMANDS = {
     "summary": cmd_summary,
     "grant": cmd_grant,
+    "edit": cmd_edit,
     "revoke": cmd_revoke,
     "list-revoked": cmd_list_revoked,
     "set-revoked": cmd_set_revoked,
@@ -183,6 +228,18 @@ run__do_grant() {
 		"$grant_role" "${grant_expires:-}" || ynh_die "Could not grant access - see the error above"
 	_ymcp_fix_perms "$data_dir/identity.toml"
 	ynh_print_info "Granted $grant_role to $grant_npub - effective immediately, no restart needed"
+}
+
+run__do_edit() {
+	[ -n "${edit_npub:-}" ] || ynh_die "Enter the agent's npub to edit"
+
+	local role_arg="${edit_role:-}"
+	[ "$role_arg" = "(keep current)" ] && role_arg=""
+
+	_ymcp_identity_tool edit "$data_dir/identity.toml" "$edit_npub" "${edit_name:-}" \
+		"$role_arg" "${edit_expires:-}" || ynh_die "Could not edit identity - see the error above"
+	_ymcp_fix_perms "$data_dir/identity.toml"
+	ynh_print_info "Updated $edit_npub - effective immediately, no restart needed"
 }
 
 run__do_revoke() {
