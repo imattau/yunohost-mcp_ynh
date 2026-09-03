@@ -4,18 +4,21 @@ Point your MCP client (Claude, Codex, or any MCP-over-Streamable-HTTP client) at
 
 ## Granting access: identity.toml
 
-`$data_dir/identity.toml` (typically `/home/yunohost.app/yunohost_mcp/identity.toml`) is the access-control file. Your own npub was seeded into it at install time as `administrator`. To grant another identity access:
+`$data_dir/identity.toml` (typically `/home/yunohost.app/yunohost_mcp/identity.toml`) is the access-control file. Your own npub was seeded into it at install time as `administrator`. Two ways to grant another identity access:
 
-```toml
-[identity."npub1..."]
-name = "Codex development agent"
-roles = ["package-developer"]
-expires = "2026-12-31T00:00:00+00:00"   # optional
-```
+- **Webadmin (no SSH needed):** Apps → YunoHost MCP → Config panel → *Agent access* → *Grant a new identity*. Enter the agent's npub, a display name, pick a role, and optionally an expiry date, then click *Grant access*. The same tab's *Current identities* section shows everyone currently granted, and *Revoke an identity* removes one by npub (it refuses to remove the last remaining administrator, to stop you locking yourself out by accident).
+- **SSH, editing the file directly:**
 
-Available roles: `readonly`, `operator`, `app-admin`, `package-developer`, `administrator`. See the upstream repo's `PLAN.md` and `src/yunohost_mcp/policy/roles.py` for exactly which scopes each grants. Edit this file over SSH as root, then no restart is needed — it's re-read on every request.
+  ```toml
+  [identity."npub1..."]
+  name = "Codex development agent"
+  roles = ["package-developer"]
+  expires = "2026-12-31T00:00:00+00:00"   # optional
+  ```
 
-An entry with no `expires` never expires. Removing an entry (or letting it expire) immediately revokes that identity, including anything it was ever delegated the authority to further delegate.
+Available roles: `readonly`, `operator`, `app-admin`, `package-developer`, `administrator`. See the upstream repo's `PLAN.md` and `src/yunohost_mcp/policy/roles.py` for exactly which scopes each grants. Either way, no restart is needed — the file is re-read on every request.
+
+An entry with no `expires` never expires. Removing an entry (or letting it expire) immediately revokes that identity, including anything it was ever delegated the authority to further delegate. To revoke one specific delegation without touching the delegator's own entry, add its event id to the config panel's *Revoked delegations* list (or `$data_dir/revoked_delegations.toml`'s `revoked` array directly) — see [delegation](https://github.com/imattau/yunohost-mcp/blob/master/PLAN.md) and the upstream `yunohost-mcp-delegate` tool, which prints the event id after signing one.
 
 ## Adjusting safety policy: policy.toml
 

@@ -1,0 +1,106 @@
+#:schema https://github.com/YunoHost/apps/raw/main/schemas/config_panel.v1.schema.json
+
+## Grant/revoke identities and delegations straight from the webadmin,
+## without SSH - see scripts/config for the real logic (custom
+## getters/setters/actions; every change here writes directly to
+## identity.toml / revoked_delegations.toml under $data_dir).
+##
+## All of it takes effect immediately: yunohost-mcp reloads both files on
+## every request rather than only at startup, so nothing here restarts the
+## service.
+
+version = "1.0"
+
+[access]
+name.en = "Agent access"
+name.fr = "Accès des agents"
+services = []
+
+    [access.overview]
+    name.en = "Current identities"
+    name.fr = "Identités actuelles"
+
+        [access.overview.identities_summary]
+        ask.en = "Granted identities"
+        ask.fr = "Identités accordées"
+        type = "alert"
+        style = "info"
+        # Filled dynamically by get__identities_summary in scripts/config.
+
+    [access.grant]
+    name.en = "Grant a new identity"
+    name.fr = "Accorder une nouvelle identité"
+    help.en = "Adds an entry to identity.toml. Effective immediately, no restart needed."
+    help.fr = "Ajoute une entrée à identity.toml. Effectif immédiatement, aucun redémarrage requis."
+
+        [access.grant.grant_npub]
+        ask.en = "Agent's npub"
+        ask.fr = "npub de l'agent"
+        type = "string"
+        optional = true
+        example = "npub1sn0wdenkukak0d9dfczzeacvhkrgz92ak56egt7vdgzn8pv2wfqqhrjdv9"
+        pattern.regexp = '^$|^npub1[a-z0-9]{20,}$'
+        pattern.error = "Must be a valid npub1... Nostr public key"
+
+        [access.grant.grant_name]
+        ask.en = "Display name"
+        ask.fr = "Nom affiché"
+        type = "string"
+        optional = true
+        example = "Claude agent"
+
+        [access.grant.grant_role]
+        ask.en = "Role"
+        ask.fr = "Rôle"
+        type = "select"
+        choices = ["readonly", "operator", "app-admin", "package-developer", "administrator"]
+        default = "readonly"
+        help.en = "See PLAN.md / src/yunohost_mcp/policy/roles.py upstream for exactly which scopes each role grants."
+
+        [access.grant.grant_expires]
+        ask.en = "Expires (optional, YYYY-MM-DD)"
+        ask.fr = "Expire (optionnel, AAAA-MM-JJ)"
+        type = "string"
+        optional = true
+        pattern.regexp = '^$|^\d{4}-\d{2}-\d{2}$'
+        pattern.error = "Use YYYY-MM-DD, or leave empty for no expiry"
+
+        [access.grant.do_grant]
+        ask.en = "Grant access"
+        ask.fr = "Accorder l'accès"
+        type = "button"
+        style = "success"
+
+    [access.revoke]
+    name.en = "Revoke an identity"
+    name.fr = "Révoquer une identité"
+    help.en = "Removes an entry from identity.toml by npub. Effective immediately. Refuses to remove the last remaining administrator - use SSH (see doc/ADMIN.md) if that's genuinely what you need."
+    help.fr = "Supprime une entrée de identity.toml par npub. Effectif immédiatement. Refuse de supprimer le dernier administrateur restant - utilisez SSH (voir doc/ADMIN.md) si c'est réellement nécessaire."
+
+        [access.revoke.revoke_npub]
+        ask.en = "Agent's npub to revoke"
+        ask.fr = "npub de l'agent à révoquer"
+        type = "string"
+        optional = true
+        pattern.regexp = '^$|^npub1[a-z0-9]{20,}$'
+        pattern.error = "Must be a valid npub1... Nostr public key"
+
+        [access.revoke.do_revoke]
+        ask.en = "Revoke access"
+        ask.fr = "Révoquer l'accès"
+        type = "button"
+        style = "danger"
+
+    [access.delegations]
+    name.en = "Revoked delegations"
+    name.fr = "Délégations révoquées"
+    help.en = "Delegation event ids (PLAN.md Phase 11) blocked independently of the delegator's own identity.toml entry - use yunohost-mcp-delegate's printed 'Event id' to find one. Editing this list takes effect immediately."
+    help.fr = "Identifiants d'événements de délégation (PLAN.md Phase 11) bloqués indépendamment de l'entrée identity.toml du délégant - utilisez le « Event id » affiché par yunohost-mcp-delegate. La modification de cette liste est effective immédiatement."
+
+        [access.delegations.revoked_delegation_ids]
+        ask.en = "Revoked delegation event ids"
+        ask.fr = "Identifiants d'événements de délégation révoqués"
+        type = "tags"
+        bind = "null"
+        pattern.regexp = '^[0-9a-f]{64}$'
+        pattern.error = "Must be a 64-char hex event id"

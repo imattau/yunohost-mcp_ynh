@@ -1,0 +1,198 @@
+#!/bin/bash
+#=================================================
+# IMPORT GENERIC HELPERS
+#=================================================
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+ynh_abort_if_errors
+
+#=================================================
+# RETRIEVE ARGUMENTS
+#=================================================
+
+install_dir=$(ynh_app_setting_get --key=install_dir)
+data_dir=$(ynh_app_setting_get --key=data_dir)
+
+#=================================================
+# SHARED PYTHON HELPER
+#=================================================
+
+# All identity.toml / revoked_delegations.toml reads and writes go through
+# this one script, run inside the app's own venv (so it can reuse
+# yunohost_mcp's own npub/role validation rather than re-implementing it in
+# bash) - user-supplied values (npub, name, role, expires, revoked ids) are
+# always passed as argv, never interpolated into the python source itself.
+_ymcp_identity_tool() {
+	"$install_dir/venv/bin/python3" - "$@" <<'PYEOF'
+import json
+import sys
+import tomllib
+from pathlib import Path
+
+
+def _load(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    return tomllib.loads(path.read_text()).get("identity", {})
+
+
+def _serialize(identities: dict) -> str:
+    parts = []
+    for key, entry in identities.items():
+        parts.append(f'[identity."{key}"]')
+        parts.append(f"name = {json.dumps(entry.get('name', key))}")
+        roles = ", ".join(json.dumps(r) for r in entry.get("roles", []))
+        parts.append(f"roles = [{roles}]")
+        if entry.get("expires"):
+            parts.append(f"expires = {json.dumps(entry['expires'])}")
+        parts.append("")
+    return "\n".join(parts)
+
+
+def cmd_summary(identity_path: str) -> None:
+    identities = _load(Path(identity_path))
+    if not identities:
+        print("(no identities granted - this should not happen after a normal install)")
+        return
+    lines = []
+    for key, entry in identities.items():
+        roles = ", ".join(entry.get("roles", []))
+        expires = entry.get("expires") or "never"
+        short = key if len(key) <= 20 else key[:16] + "…"
+        lines.append(f"- {entry.get('name', key)} ({short}): {roles}, expires {expires}")
+    print("\n".join(lines))
+
+
+def cmd_grant(identity_path: str, npub: str, name: str, role: str, expires: str) -> None:
+    from yunohost_mcp.auth.npub import Bech32Error, npub_to_hex
+    from yunohost_mcp.policy.roles import ROLE_SCOPES
+
+    if role not in ROLE_SCOPES:
+        sys.exit(f"unknown role: {role!r}; known roles: {sorted(ROLE_SCOPES)}")
+    try:
+        npub_to_hex(npub)
+    except Bech32Error as exc:
+        sys.exit(f"invalid npub: {exc}")
+
+    path = Path(identity_path)
+    identities = _load(path)
+    if npub in identities:
+        sys.exit(f"{npub} is already granted - revoke it first to change its role, name, or expiry")
+
+    block = f'\n[identity."{npub}"]\nname = {json.dumps(name or npub)}\nroles = [{json.dumps(role)}]\n'
+    if expires:
+        block += f'expires = {json.dumps(expires + "T00:00:00+00:00")}\n'
+    with path.open("a") as f:
+        f.write(block)
+    print(f"granted {role} to {npub}")
+
+
+def cmd_revoke(identity_path: str, npub: str) -> None:
+    path = Path(identity_path)
+    identities = _load(path)
+    if npub not in identities:
+        sys.exit(f"{npub} is not currently granted")
+
+    removed_was_admin = "administrator" in identities[npub].get("roles", [])
+    remaining = {k: v for k, v in identities.items() if k != npub}
+    remaining_admins = [k for k, v in remaining.items() if "administrator" in v.get("roles", [])]
+    if removed_was_admin and not remaining_admins:
+        sys.exit(
+            "refusing to remove the last administrator identity - this would lock every agent "
+            "out of privileged access; edit identity.toml directly over SSH if this is genuinely "
+            "intended (see doc/ADMIN.md)"
+        )
+
+    path.write_text(_serialize(remaining))
+    print(f"revoked {npub}")
+
+
+def cmd_list_revoked(revoked_path: str) -> None:
+    path = Path(revoked_path)
+    if not path.exists():
+        return
+    data = tomllib.loads(path.read_text())
+    print(",".join(data.get("revoked", [])))
+
+
+def cmd_set_revoked(revoked_path: str, ids_csv: str) -> None:
+    ids = sorted({i for i in ids_csv.split(",") if i})
+    items = ", ".join(json.dumps(i) for i in ids)
+    Path(revoked_path).write_text(f"revoked = [{items}]\n")
+    print(f"{len(ids)} delegation(s) revoked")
+
+
+COMMANDS = {
+    "summary": cmd_summary,
+    "grant": cmd_grant,
+    "revoke": cmd_revoke,
+    "list-revoked": cmd_list_revoked,
+    "set-revoked": cmd_set_revoked,
+}
+
+_cmd, *_args = sys.argv[1:]
+COMMANDS[_cmd](*_args)
+PYEOF
+}
+
+# identity.toml / revoked_delegations.toml are owned by $app, mode 640
+# (yunohost_mcp_seed_identity in _common.sh) - restore that after any
+# rewrite from these root-run config scripts, the same as install does.
+_ymcp_fix_perms() {
+	chown "$app:$app" "$1"
+	chmod 640 "$1"
+}
+
+#=================================================
+# GETTERS
+#=================================================
+
+get__identities_summary() {
+	local summary
+	summary="$(_ymcp_identity_tool summary "$data_dir/identity.toml")"
+	cat <<EOF
+ask:
+  en: |
+$(echo "$summary" | sed 's/^/    /')
+EOF
+}
+
+get__revoked_delegation_ids() {
+	_ymcp_identity_tool list-revoked "$data_dir/revoked_delegations.toml"
+}
+
+#=================================================
+# SETTERS
+#=================================================
+
+set__revoked_delegation_ids() {
+	_ymcp_identity_tool set-revoked "$data_dir/revoked_delegations.toml" "$revoked_delegation_ids"
+	_ymcp_fix_perms "$data_dir/revoked_delegations.toml"
+}
+
+#=================================================
+# ACTIONS
+#=================================================
+
+run__do_grant() {
+	[ -n "${grant_npub:-}" ] || ynh_die "Enter the agent's npub before granting access"
+
+	_ymcp_identity_tool grant "$data_dir/identity.toml" "$grant_npub" "${grant_name:-$grant_npub}" \
+		"$grant_role" "${grant_expires:-}" || ynh_die "Could not grant access - see the error above"
+	_ymcp_fix_perms "$data_dir/identity.toml"
+	ynh_print_success "Granted $grant_role to $grant_npub - effective immediately, no restart needed"
+}
+
+run__do_revoke() {
+	[ -n "${revoke_npub:-}" ] || ynh_die "Enter an npub to revoke"
+
+	_ymcp_identity_tool revoke "$data_dir/identity.toml" "$revoke_npub" \
+		|| ynh_die "Could not revoke access - see the error above"
+	_ymcp_fix_perms "$data_dir/identity.toml"
+	ynh_print_success "Revoked $revoke_npub - effective immediately, no restart needed"
+}
+
+#=================================================
+ynh_app_config_run "$1"
