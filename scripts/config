@@ -182,7 +182,7 @@ run__do_grant() {
 	_ymcp_identity_tool grant "$data_dir/identity.toml" "$grant_npub" "${grant_name:-$grant_npub}" \
 		"$grant_role" "${grant_expires:-}" || ynh_die "Could not grant access - see the error above"
 	_ymcp_fix_perms "$data_dir/identity.toml"
-	ynh_print_success "Granted $grant_role to $grant_npub - effective immediately, no restart needed"
+	ynh_print_info "Granted $grant_role to $grant_npub - effective immediately, no restart needed"
 }
 
 run__do_revoke() {
@@ -191,7 +191,7 @@ run__do_revoke() {
 	_ymcp_identity_tool revoke "$data_dir/identity.toml" "$revoke_npub" \
 		|| ynh_die "Could not revoke access - see the error above"
 	_ymcp_fix_perms "$data_dir/identity.toml"
-	ynh_print_success "Revoked $revoke_npub - effective immediately, no restart needed"
+	ynh_print_info "Revoked $revoke_npub - effective immediately, no restart needed"
 }
 
 #=================================================
