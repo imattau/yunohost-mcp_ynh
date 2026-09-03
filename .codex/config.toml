@@ -1,0 +1,6 @@
+[mcp_servers.yunohost-mcp]
+command = "/home/lostcause/.local/share/yunohost-mcp-client/venv/bin/yunohost-mcp-connect"
+
+[mcp_servers.yunohost-mcp.env]
+YUNOHOST_MCP_CLIENT_REMOTE_URL = "https://mcp.lostcause.nohost.me/mcp"
+YUNOHOST_MCP_CLIENT_KEY_FILE = "/home/lostcause/.config/yunohost-mcp/codex.key"

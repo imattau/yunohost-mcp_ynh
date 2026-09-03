@@ -4,6 +4,16 @@ Every request to `https://your-domain/mcp` authenticates with a [NIP-98](https:/
 
 Mainstream clients (Claude Desktop, Codex CLI, etc.) can't sign that header themselves, so point them at `yunohost-mcp-connect` (installed alongside the server, in this app's own venv) instead of the URL directly — see the upstream [README](https://github.com/imattau/yunohost-mcp/blob/master/README.md#connecting-claude-desktop-or-codex) for exact `claude_desktop_config.json`/`config.toml` snippets.
 
+**Give every client its own key file.** `yunohost-mcp-connect`'s `YUNOHOST_MCP_CLIENT_KEY_FILE` *is* the identity: whichever key signs a request determines its role and scopes, nothing else. Point two different tools (or two different config files for the same tool — e.g. a project-local `.codex/config.toml` shadowing `~/.codex/config.toml`) at the same key file, and the second one silently inherits the first's exact permissions — no error, no warning, it just authenticates as if it were the other identity. This is easy to hit by accident (copy-pasting one client's MCP config as a starting point for another's and forgetting to swap the key path), and unlike a wrong password or a malformed key it produces no failure to notice - it just works, as the wrong identity.
+
+When wiring up a new AI tool against this server, generate it a key of its own rather than reusing a key file that already works for something else:
+
+```
+yunohost-mcp-connect --generate-key ~/.config/yunohost-mcp/<tool-name>.key
+```
+
+This writes the key (0600; refuses to overwrite an existing file) and prints its npub. Point that tool's `YUNOHOST_MCP_CLIENT_KEY_FILE` at the new file, and grant *that* npub whatever role is actually appropriate for it (see below) - not the role you already gave a different tool.
+
 ## Granting access: identity.toml
 
 `$data_dir/identity.toml` (typically `/home/yunohost.app/yunohost_mcp/identity.toml`) is the access-control file. Your own npub was seeded into it at install time as `administrator`. Two ways to grant another identity access:
