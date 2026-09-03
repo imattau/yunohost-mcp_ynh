@@ -1,0 +1,35 @@
+#!/bin/bash
+
+source /usr/share/yunohost/helpers
+
+ynh_print_info "Declaring files to be backed up..."
+
+#=================================================
+# BACKUP THE APP MAIN DIR
+#=================================================
+
+ynh_backup "$install_dir"
+
+#=================================================
+# BACKUP THE DATA DIR
+#=================================================
+# identity.toml, policy.toml, revoked_delegations.toml, audit.jsonl, and
+# the server's own Nostr keypair (server_identity.key) all live here - the
+# whole point of restoring this backup is to come back as the *same*
+# server identity with the *same* access-control config, not a fresh one.
+
+ynh_backup "$data_dir"
+
+#=================================================
+# SYSTEM CONFIGURATION
+#=================================================
+
+ynh_backup "/etc/nginx/conf.d/$domain.d/$app.conf"
+
+ynh_backup "/etc/systemd/system/$app.service"
+
+#=================================================
+# END OF SCRIPT
+#=================================================
+
+ynh_print_info "Backup script completed for $app. (YunoHost will then actually copy those files to the archive)."

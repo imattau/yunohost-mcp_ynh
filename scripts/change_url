@@ -1,0 +1,37 @@
+#!/bin/bash
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+#=================================================
+# STOP SYSTEMD SERVICE
+#=================================================
+ynh_script_progression "Stopping $app's systemd service..."
+
+ynh_systemctl --service="$app" --action="stop"
+
+#=================================================
+# MODIFY URL IN NGINX CONF
+#=================================================
+ynh_script_progression "Updating NGINX web server configuration..."
+
+ynh_config_change_url_nginx
+
+#=================================================
+# START SYSTEMD SERVICE
+#=================================================
+# Nothing else needs updating: the app itself doesn't bake its domain into
+# anything (NIP-98's "u" tag is checked against whatever URL a client
+# actually used, and delegations reference the server's Nostr pubkey, not
+# its domain - see auth/delegation.py upstream), so a domain change is
+# purely an nginx-level change.
+ynh_script_progression "Starting $app's systemd service..."
+
+ynh_systemctl --service="$app" --action="start" \
+	--log_path="systemd" \
+	--wait_until="Uvicorn running on"
+
+#=================================================
+# END OF SCRIPT
+#=================================================
+ynh_script_progression "Change of URL completed for $app"

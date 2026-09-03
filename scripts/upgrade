@@ -1,0 +1,52 @@
+#!/bin/bash
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+#=================================================
+# STOP SYSTEMD SERVICE
+#=================================================
+ynh_script_progression "Stopping $app's systemd service..."
+
+ynh_systemctl --service="$app" --action="stop"
+
+#=================================================
+# DOWNLOAD, CHECK AND UNPACK SOURCE
+#=================================================
+ynh_script_progression "Upgrading source files..."
+
+ynh_setup_source --dest_dir="$install_dir" --full_replace
+
+#=================================================
+# REINSTALL PYTHON VIRTUAL ENVIRONMENT
+#=================================================
+# ynh_setup_source --full_replace wipes install_dir, so the venv (which
+# lived under it) is gone too - rebuild it from the fresh source.
+ynh_script_progression "Setting up the Python virtual environment..."
+
+yunohost_mcp_install_venv
+
+#=================================================
+# REAPPLY SYSTEM CONFIGURATIONS
+#=================================================
+ynh_script_progression "Upgrading system configurations related to $app..."
+
+ynh_config_add_nginx
+
+ynh_config_add_systemd
+
+yunohost service add "$app" --description="YunoHost MCP server (Nostr-authenticated)"
+
+#=================================================
+# START SYSTEMD SERVICE
+#=================================================
+ynh_script_progression "Starting $app's systemd service..."
+
+ynh_systemctl --service="$app" --action="start" \
+	--log_path="systemd" \
+	--wait_until="Uvicorn running on"
+
+#=================================================
+# END OF SCRIPT
+#=================================================
+ynh_script_progression "Upgrade of $app completed"

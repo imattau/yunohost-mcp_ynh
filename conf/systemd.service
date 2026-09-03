@@ -1,0 +1,51 @@
+[Unit]
+Description=YunoHost MCP: Nostr-authenticated MCP server for YunoHost administration
+After=network.target
+
+[Service]
+Type=simple
+
+# Runs as root, not __APP__: yunohost-mcp imports yunohost.* Python modules
+# directly in-process (see PHASE0_INVESTIGATION.md in the upstream repo),
+# and those underlying operations (systemctl, apt, LDAP admin bind, writes
+# to /etc/yunohost/*) genuinely require root - this isn't a shortcut, it's
+# what the current single-process architecture needs to function against a
+# real YunoHost install at all. Splitting this into an unprivileged
+# HTTP-facing process plus a minimal privileged helper is documented
+# upstream (PLAN.md Phase 15) as a real, open piece of future work, not
+# something already done. See doc/ADMIN.md for what this means for you.
+WorkingDirectory=__INSTALL_DIR__/
+Environment=PATH=__INSTALL_DIR__/venv/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=YUNOHOST_MCP_CONFIG_DIR=__DATA_DIR__
+Environment=YUNOHOST_MCP_FAKE_YUNOHOST=false
+ExecStart=__INSTALL_DIR__/venv/bin/yunohost-mcp --transport http --host 127.0.0.1 --port __PORT__
+Restart=always
+RestartSec=5
+
+# Conservative sandboxing: a process that legitimately needs to drive
+# systemctl/apt/LDAP as root can't use the aggressive filesystem lockdown
+# (ProtectSystem=strict, ProtectHome) a normal unprivileged webapp would -
+# that would need an allowlist matching yunohost's own footprint across
+# /etc/yunohost, /var/www, /home/yunohost.app, /home/yunohost.backup, and
+# more, which isn't something this package can enumerate reliably. These
+# restrictions are the safe subset that constrains what a compromised
+# process could do *beyond* what yunohost itself already needs, without
+# risking silently breaking real YunoHost operations.
+NoNewPrivileges=yes
+PrivateTmp=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+RestrictNamespaces=yes
+RestrictRealtime=yes
+LockPersonality=yes
+SystemCallFilter=~@clock @debug @module @mount @obsolete @reboot @swap
+ReadWritePaths=__DATA_DIR__
+
+# Capabilities genuinely irrelevant to what yunohost.* operations need,
+# safely excludable even though this runs as root.
+CapabilityBoundingSet=~CAP_SYS_BOOT CAP_SYS_TIME CAP_SYS_MODULE CAP_SYS_PACCT
+CapabilityBoundingSet=~CAP_LEASE CAP_BLOCK_SUSPEND CAP_WAKE_ALARM
+CapabilityBoundingSet=~CAP_SYS_TTY_CONFIG CAP_MAC_ADMIN CAP_MAC_OVERRIDE
+CapabilityBoundingSet=~CAP_AUDIT_CONTROL CAP_AUDIT_READ CAP_AUDIT_WRITE
+
+[Install]
+WantedBy=multi-user.target

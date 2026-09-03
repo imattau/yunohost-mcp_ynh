@@ -1,0 +1,7 @@
+YunoHost MCP is a [Model Context Protocol](https://modelcontextprotocol.io) server that lets AI coding agents (Claude, Codex, and other MCP clients) inspect, diagnose, and administer this YunoHost server — and develop/test `_ynh` app packages — through typed, policy-controlled tools, instead of arbitrary shell access.
+
+Every request is authenticated with [NIP-98](https://github.com/nostr-protocol/nips/blob/master/98.md) signed Nostr events, not YunoHost user accounts: an agent proves it holds a specific Nostr private key on every call. What that identity is actually *allowed* to do is a completely separate decision, made from an `identity.toml` file you control — a valid signature only proves who is asking, never what they may do.
+
+Read access (server info, diagnosis, app/service/backup status, operation logs) is broad by default. Writes (installing, upgrading, or removing apps; restarting services; restoring backups; system upgrades) are scope-gated, policy-checked (a recent backup and enough free disk space before an upgrade proceeds, for instance), and audited. The riskiest operations — system upgrades and backup restores — additionally require a second, independent signature from a different identity before they execute, so no single compromised or over-eager agent key can act alone.
+
+A dedicated role lets a package developer iterate on a candidate `_ynh` app package (install → inspect logs → fix → reinstall) directly against this server, without full administrative access.

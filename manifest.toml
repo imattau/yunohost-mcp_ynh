@@ -1,0 +1,65 @@
+#:schema https://raw.githubusercontent.com/YunoHost/apps/main/schemas/manifest.v2.schema.json
+
+packaging_format = 2
+
+id = "yunohost_mcp"
+name = "YunoHost MCP"
+description.en = "Nostr-authenticated MCP server for AI-assisted YunoHost administration and app-package development"
+description.fr = "Serveur MCP authentifié par Nostr pour l'administration de YunoHost et le développement de paquets assistés par IA"
+
+version = "0.1.0~ynh1"
+
+maintainers = []
+
+[upstream]
+license = "AGPL-3.0-or-later"
+admindoc = "https://github.com/imattau/yunohost-mcp/blob/master/PLAN.md"
+code = "https://github.com/imattau/yunohost-mcp"
+
+[integration]
+yunohost = ">= 12.1.17"
+helpers_version = "2.1"
+architectures = "all"
+multi_instance = false
+ldap = false
+sso = false
+disk = "200M"
+ram.build = "512M"
+ram.runtime = "80M"
+
+[install]
+    [install.domain]
+    type = "domain"
+
+    [install.init_main_permission]
+    type = "group"
+    default = "visitors"
+
+    [install.admin_npub]
+    ask.en = "Your Nostr public key (npub) - granted the administrator role so you aren't locked out of your own server"
+    ask.fr = "Votre clé publique Nostr (npub) - se verra attribuer le rôle administrateur pour que vous ne soyez pas exclu de votre propre serveur"
+    type = "string"
+    example = "npub1sn0wdenkukak0d9dfczzeacvhkrgz92ak56egt7vdgzn8pv2wfqqhrjdv9"
+    pattern.regexp = "^npub1[a-z0-9]{20,}$"
+    pattern.error = "Must be a valid npub (starting with npub1)"
+
+[resources]
+    [resources.sources.main]
+    url = "https://github.com/imattau/yunohost-mcp/archive/b2153f7ff3da803afb9714d692e22305b390c42b.tar.gz"
+    sha256 = "3286fbd6aa8fde95eba67ed31cbd8616a8e6e6e8381f17b606da25734eee7f40"
+    autoupdate.strategy = "latest_github_commit"
+
+    [resources.system_user]
+
+    [resources.install_dir]
+
+    [resources.data_dir]
+
+    [resources.permissions.main]
+    url = "/"
+
+    [resources.ports.main]
+    default = 8765
+
+    [resources.apt]
+    packages = "python3-venv, python3-dev, build-essential, libffi-dev, pkg-config"
