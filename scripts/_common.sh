@@ -10,7 +10,11 @@
 # used by the systemd service, which also runs as root - see
 # conf/systemd.service for why).
 yunohost_mcp_install_venv() {
-	python3 -m venv "$install_dir/venv"
+	# --system-site-packages: the yunohost Python package isn't pip-installable -
+	# it's installed system-wide by moulinette/yunohost core (apt). Without this
+	# flag the venv is fully isolated and every YunoHost-API-backed tool fails
+	# with "ModuleNotFoundError: No module named 'yunohost'".
+	python3 -m venv --system-site-packages "$install_dir/venv"
 	ynh_hide_warnings "$install_dir/venv/bin/pip" install --upgrade pip
 	ynh_hide_warnings "$install_dir/venv/bin/pip" install "$install_dir"
 }
