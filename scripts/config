@@ -65,6 +65,30 @@ def cmd_summary(identity_path: str) -> None:
     print("\n".join(lines))
 
 
+def cmd_choices(identity_path: str) -> None:
+    """YAML `choices:` mapping (npub -> a human-readable label) for the
+    edit/revoke panels' select fields, so an admin picks an identity from
+    a dropdown instead of having to remember/copy-paste its exact npub -
+    see get__edit_npub/get__revoke_npub below. Deliberately not the
+    `ask:`-only override pattern cmd_summary's caller (get__identities_summary)
+    uses: choices is itself a real, documented override key a getter's
+    YAML output can set on a select option (see YunoHost core's
+    configpanel.py _get_partial_raw_settings_and_mutate_config, which
+    setattr()s any non-value/current_value key from a getter's dict
+    output directly onto the option object)."""
+    identities = _load(Path(identity_path))
+    print("choices:")
+    if not identities:
+        print('  placeholder: "(no identities currently granted)"')
+        return
+    for key, entry in identities.items():
+        name = entry.get("name", key)
+        roles = ", ".join(entry.get("roles", [])) or "no roles"
+        short = key if len(key) <= 20 else key[:16] + "…"
+        label = f"{name} ({roles}) — {short}"
+        print(f"  {json.dumps(key)}: {json.dumps(label)}")
+
+
 def cmd_grant(identity_path: str, npub: str, name: str, role: str, expires: str) -> None:
     from yunohost_mcp.auth.npub import Bech32Error, npub_to_hex
     from yunohost_mcp.policy.roles import ROLE_SCOPES
@@ -170,6 +194,7 @@ def cmd_set_revoked(revoked_path: str, ids_csv: str) -> None:
 
 COMMANDS = {
     "summary": cmd_summary,
+    "choices": cmd_choices,
     "grant": cmd_grant,
     "edit": cmd_edit,
     "revoke": cmd_revoke,
@@ -206,6 +231,14 @@ EOF
 
 get__revoked_delegation_ids() {
 	_ymcp_identity_tool list-revoked "$data_dir/revoked_delegations.toml"
+}
+
+get__edit_npub() {
+	_ymcp_identity_tool choices "$data_dir/identity.toml"
+}
+
+get__revoke_npub() {
+	_ymcp_identity_tool choices "$data_dir/identity.toml"
 }
 
 #=================================================

@@ -34,14 +34,16 @@ services = []
     help.fr = "Modifie une entrée identity.toml existante sur place - inutile de révoquer puis ré-accorder pour changer un rôle, un nom ou une expiration. Effectif immédiatement, aucun redémarrage requis. Laissez un champ vide (ou « keep current » pour le rôle) pour le laisser inchangé ; pour l'expiration, tapez « clear » pour la supprimer."
 
         [access.edit.edit_npub]
-        ask.en = "Agent's npub to edit"
-        ask.fr = "npub de l'agent à modifier"
-        type = "string"
+        ask.en = "Agent to edit"
+        ask.fr = "Agent à modifier"
+        type = "select"
         optional = true
         bind = "null"
-        example = "npub1sn0wdenkukak0d9dfczzeacvhkrgz92ak56egt7vdgzn8pv2wfqqhrjdv9"
-        pattern.regexp = '^$|^npub1[a-z0-9]{20,}$'
-        pattern.error = "Must be a valid npub1... Nostr public key"
+        choices = { placeholder = "(loading current identities...)" }
+        # The real choices (npub -> "name (roles) — npub") are filled
+        # dynamically by get__edit_npub in scripts/config, from whatever
+        # identity.toml currently holds - no need to remember or
+        # copy-paste an exact npub.
 
         [access.edit.edit_name]
         ask.en = "New display name (leave blank to keep current)"
@@ -129,13 +131,14 @@ services = []
     help.fr = "Supprime une entrée de identity.toml par npub. Effectif immédiatement. Refuse de supprimer le dernier administrateur restant - utilisez SSH (voir doc/ADMIN.md) si c'est réellement nécessaire."
 
         [access.revoke.revoke_npub]
-        ask.en = "Agent's npub to revoke"
-        ask.fr = "npub de l'agent à révoquer"
-        type = "string"
+        ask.en = "Agent to revoke"
+        ask.fr = "Agent à révoquer"
+        type = "select"
         optional = true
         bind = "null"
-        pattern.regexp = '^$|^npub1[a-z0-9]{20,}$'
-        pattern.error = "Must be a valid npub1... Nostr public key"
+        choices = { placeholder = "(loading current identities...)" }
+        # Filled dynamically by get__revoke_npub in scripts/config, same
+        # as edit_npub above.
 
         [access.revoke.do_revoke]
         ask.en = "Revoke access"
