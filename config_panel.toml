@@ -38,6 +38,7 @@ services = []
         ask.fr = "npub de l'agent"
         type = "string"
         optional = true
+        bind = "null"
         example = "npub1sn0wdenkukak0d9dfczzeacvhkrgz92ak56egt7vdgzn8pv2wfqqhrjdv9"
         pattern.regexp = '^$|^npub1[a-z0-9]{20,}$'
         pattern.error = "Must be a valid npub1... Nostr public key"
@@ -47,6 +48,7 @@ services = []
         ask.fr = "Nom affiché"
         type = "string"
         optional = true
+        bind = "null"
         example = "Claude agent"
 
         [access.grant.grant_role]
@@ -55,6 +57,7 @@ services = []
         type = "select"
         choices = ["readonly", "operator", "app-admin", "package-developer", "administrator"]
         default = "readonly"
+        bind = "null"
         help.en = "See PLAN.md / src/yunohost_mcp/policy/roles.py upstream for exactly which scopes each role grants."
 
         [access.grant.grant_expires]
@@ -62,6 +65,7 @@ services = []
         ask.fr = "Expire (optionnel, AAAA-MM-JJ)"
         type = "string"
         optional = true
+        bind = "null"
         pattern.regexp = '^$|^\d{4}-\d{2}-\d{2}$'
         pattern.error = "Use YYYY-MM-DD, or leave empty for no expiry"
 
@@ -82,6 +86,7 @@ services = []
         ask.fr = "npub de l'agent à révoquer"
         type = "string"
         optional = true
+        bind = "null"
         pattern.regexp = '^$|^npub1[a-z0-9]{20,}$'
         pattern.error = "Must be a valid npub1... Nostr public key"
 
