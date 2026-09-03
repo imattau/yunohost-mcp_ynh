@@ -10,6 +10,8 @@ Every request authenticates with a [NIP-98](https://github.com/nostr-protocol/ni
 
 🛠️ Upstream project: <https://github.com/imattau/yunohost-mcp>
 
+💬 Discuss this package: [Armada community](https://armada.buzz/invite/naddr1qvzqqqyzz5pzpverd527pyxx49f7hyk07t3wtwj9cm7zadg8suczsr7gymfygna2qqqqjm82js#BAADAQIDoL2AmVEk5T684eVCWeE8Qg)
+
 > **Note**: this package is not yet listed in the official YunoHost app catalog, so it must be installed from this repository's URL rather than by name.
 
 ## Install
