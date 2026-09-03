@@ -11,3 +11,7 @@ This app is installed at the root of a domain (no custom path) — an MCP client
 ## What this actually does once installed
 
 This is not a web app you browse. It's an API endpoint an MCP-capable AI client connects to directly, authenticating each request with a Nostr signature. See `doc/ADMIN.md` after install for how to grant further identities access, and for an important note about the privilege level this service runs at.
+
+## Your MCP client needs to support NIP-98
+
+Mainstream MCP clients (Claude Desktop, a plain Codex CLI install, etc.) don't sign requests with a Nostr key out of the box — that's specific to this server. You'll need a client, wrapper, or proxy that can attach a [NIP-98](https://github.com/nostr-protocol/nips/blob/master/98.md) `Authorization: Nostr ...` header signed with your own key to every request. If you don't already have one, install this only once you know what you're connecting with.

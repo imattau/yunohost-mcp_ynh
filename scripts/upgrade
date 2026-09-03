@@ -49,4 +49,6 @@ ynh_systemctl --service="$app" --action="start" \
 #=================================================
 # END OF SCRIPT
 #=================================================
+yunohost_mcp_print_connection_info "$domain"
+
 ynh_script_progression "Upgrade of $app completed"

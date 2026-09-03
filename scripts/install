@@ -52,5 +52,7 @@ ynh_systemctl --service="$app" --action="start" \
 #=================================================
 # END OF SCRIPT
 #=================================================
+yunohost_mcp_print_connection_info "$domain"
+
 ynh_script_progression "Installation of $app completed"
-ynh_script_progression "Server identity, tool list, and further setup: yunohost app info $app --full, or see doc/ADMIN.md"
+ynh_script_progression "Your npub ($admin_npub) is already granted administrator - see doc/ADMIN.md to add more identities"

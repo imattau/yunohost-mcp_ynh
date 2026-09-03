@@ -34,4 +34,6 @@ ynh_systemctl --service="$app" --action="start" \
 #=================================================
 # END OF SCRIPT
 #=================================================
+yunohost_mcp_print_connection_info "$new_domain"
+
 ynh_script_progression "Change of URL completed for $app"
