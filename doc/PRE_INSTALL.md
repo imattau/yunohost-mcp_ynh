@@ -14,4 +14,4 @@ This is not a web app you browse. It's an API endpoint an MCP-capable AI client 
 
 ## Your MCP client needs to support NIP-98
 
-Mainstream MCP clients (Claude Desktop, a plain Codex CLI install, etc.) don't sign requests with a Nostr key out of the box — that's specific to this server. You'll need a client, wrapper, or proxy that can attach a [NIP-98](https://github.com/nostr-protocol/nips/blob/master/98.md) `Authorization: Nostr ...` header signed with your own key to every request. If you don't already have one, install this only once you know what you're connecting with.
+Mainstream MCP clients (Claude Desktop, a plain Codex CLI install, etc.) don't sign requests with a Nostr key out of the box — that's specific to this server. `yunohost-mcp-connect`, a bridge tool that ships with the server itself, handles this for you: point it at your Nostr key and this server's URL, then point your MCP client at the bridge instead of the server directly. See `doc/ADMIN.md` after install for how to grant a key access, and the [upstream README](https://github.com/imattau/yunohost-mcp/blob/master/README.md) for `yunohost-mcp-connect`'s exact usage.

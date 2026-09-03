@@ -45,9 +45,9 @@ ram.runtime = "80M"
 
 [resources]
     [resources.sources.main]
-    url = "https://github.com/imattau/yunohost-mcp/archive/b2153f7ff3da803afb9714d692e22305b390c42b.tar.gz"
-    sha256 = "3286fbd6aa8fde95eba67ed31cbd8616a8e6e6e8381f17b606da25734eee7f40"
-    autoupdate.strategy = "latest_github_commit"
+    url = "https://github.com/imattau/yunohost-mcp/archive/refs/tags/v0.1.0.tar.gz"
+    sha256 = "e411bbec1f1b94ace3eed1a3f32c96f855a3af25bb93795b21a09d9341c8459d"
+    autoupdate.strategy = "latest_github_tag"
 
     [resources.system_user]
 
