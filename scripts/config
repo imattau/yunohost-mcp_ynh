@@ -291,12 +291,21 @@ get__pairing_status() {
 		qr="$(echo "$offer_output" | tail -n +2)"
 
 		if [ -n "$offer_uri" ]; then
+			# Fenced as a code block, not plain text: the ASCII QR is built
+			# from Unicode block-drawing characters that only stay compact
+			# and square in a monospace font at a small, fixed size - as
+			# plain paragraph text (proportional font, ambient size) it
+			# renders enormous. The webadmin's markdown renderer turns a
+			# ``` fence into a <pre><code> block, which fixes both.
 			summary="Not paired yet. Scan this in your NIP-46 signer app (Amber, nsec.app, ...), then click Pair or re-pair your signer below to complete pairing - this exact code stays valid across page reloads:
 
+\`\`\`
 $offer_uri
-"
+\`\`\`"
 			[ -n "$qr" ] && summary="$summary
-$qr"
+\`\`\`
+$qr
+\`\`\`"
 		else
 			summary="Not paired yet, and could not generate a pairing link right now - click Pair or re-pair your signer below and check its output for details."
 		fi
