@@ -302,10 +302,18 @@ get__pairing_status() {
 \`\`\`
 $offer_uri
 \`\`\`"
+			# Raw HTML, not a ``` fence, specifically for the QR: an
+			# inline font-size is the only remaining lever against this
+			# rendering unreasonably large (a fenced code block's font
+			# size isn't ours to set). Self-diagnosing either way - if
+			# the webadmin's markdown renderer doesn't pass raw HTML
+			# through, this will show up as literal "<pre style=...>"
+			# text instead of doing anything, which tells us definitively
+			# to stop pursuing this angle rather than guess further.
 			[ -n "$qr" ] && summary="$summary
-\`\`\`
+<pre style=\"font-size:5px;line-height:1;\">
 $qr
-\`\`\`"
+</pre>"
 		else
 			summary="Not paired yet, and could not generate a pairing link right now - click Pair or re-pair your signer below and check its output for details."
 		fi
