@@ -1,6 +1,6 @@
 # YunoHost MCP, packaged for YunoHost
 
-[![Version](https://img.shields.io/badge/Version-0.1.0~ynh1-blue)](https://github.com/imattau/yunohost-mcp-ynh)
+[![Version](https://img.shields.io/badge/Version-0.5.0~ynh1-blue)](https://github.com/imattau/yunohost-mcp-ynh)
 [![License: AGPL--3.0--or--later](https://img.shields.io/badge/License-AGPL--3.0--or--later-lightgrey)](https://github.com/imattau/yunohost-mcp/blob/master/LICENSE)
 [![Packaging format: 2](https://img.shields.io/badge/Packaging_format-2-green)](https://yunohost.org/packaging_apps)
 
