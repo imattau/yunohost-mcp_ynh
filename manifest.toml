@@ -7,7 +7,7 @@ name = "YunoHost MCP"
 description.en = "Nostr-authenticated MCP server for AI-assisted YunoHost administration and app-package development"
 description.fr = "Serveur MCP authentifié par Nostr pour l'administration de YunoHost et le développement de paquets assistés par IA"
 
-version = "0.7.12~ynh2"
+version = "0.8.0~ynh1"
 
 maintainers = []
 
@@ -44,15 +44,15 @@ ram.runtime = "80M"
     pattern.error = "Must be a valid npub (starting with npub1)"
 
     [install.pair_owner_signer_now]
-    ask.en = "Pair your NIP-46 signer now for owner approvals? (recommended, optional - can be done later from the config panel). Have your signer app (Amber, nsec.app, ...) ready before continuing: this shows a one-time link/QR code during install and waits briefly for it to be scanned."
-    ask.fr = "Associer votre signataire NIP-46 dès maintenant pour les approbations du propriétaire ? (recommandé, facultatif - possible plus tard depuis le panneau de configuration). Ayez votre application signataire (Amber, nsec.app, ...) prête avant de continuer : un lien/QR code à usage unique s'affiche pendant l'installation et une brève attente de scan suit."
+    ask.en = "Pair your NIP-46 signer now for owner approvals? (recommended, optional - can be done later from the config panel). Have your signer app (Amber, nsec.app, ...) ready before continuing: this shows a one-time link during install and waits briefly for it to be opened."
+    ask.fr = "Associer votre signataire NIP-46 dès maintenant pour les approbations du propriétaire ? (recommandé, facultatif - possible plus tard depuis le panneau de configuration). Ayez votre application signataire (Amber, nsec.app, ...) prête avant de continuer : un lien à usage unique s'affiche pendant l'installation et une brève attente d'ouverture suit."
     type = "boolean"
     default = true
 
 [resources]
     [resources.sources.main]
-    url = "https://github.com/imattau/yunohost-mcp/archive/refs/tags/v0.7.12.tar.gz"
-    sha256 = "ce6aca3cebca30cd6d3961392800fccbc921b68058fe4d1d3a4194d8de52ed39"
+    url = "https://github.com/imattau/yunohost-mcp/archive/refs/tags/v0.8.0.tar.gz"
+    sha256 = "a3be415732c898a3e06c14cc0402ae5b3aef68f268cfb2b67306804cdef37b5d"
     autoupdate.strategy = "latest_github_tag"
 
     [resources.system_user]
