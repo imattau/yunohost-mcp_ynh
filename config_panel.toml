@@ -159,3 +159,59 @@ services = []
         bind = "null"
         pattern.regexp = '^[0-9a-f]{64}$'
         pattern.error = "Must be a 64-char hex event id"
+
+[owner]
+name.en = "Owner approval"
+name.fr = "Approbation du propriétaire"
+services = []
+
+    [owner.status]
+    name.en = "Signer status"
+    name.fr = "État du signataire"
+
+        [owner.status.pairing_status]
+        ask.en = "NIP-46 signer"
+        ask.fr = "Signataire NIP-46"
+        type = "alert"
+        style = "info"
+        # Filled dynamically by get__pairing_status in scripts/config.
+
+    [owner.pair]
+    name.en = "Pair or re-pair your signer"
+    name.fr = "Associer ou réassocier votre signataire"
+    help.en = "Prints a one-time nostrconnect:// link (and QR code) to open/scan in your NIP-46 signer app (Amber, nsec.app, ...) - see this action's output after clicking. Safe to run again (e.g. after switching signer apps); it replaces the current pairing. Relays used: your own published relay list (looked up automatically from your npub) if found, otherwise a small set of sane defaults - either way, plus anything you list below."
+    help.fr = "Affiche un lien nostrconnect:// à usage unique (et un QR code) à ouvrir/scanner dans votre application signataire NIP-46 (Amber, nsec.app, ...) - voir le résultat de cette action après avoir cliqué. Peut être relancée sans risque (par exemple après un changement d'application signataire) ; elle remplace l'association actuelle. Relais utilisés : votre propre liste de relais publiée (recherchée automatiquement à partir de votre npub) si trouvée, sinon un petit ensemble de valeurs par défaut raisonnables - dans les deux cas, en plus de ceux listés ci-dessous."
+
+        [owner.pair.pair_extra_relays]
+        ask.en = "Additional relays to also use (comma-separated, optional)"
+        ask.fr = "Relais supplémentaires à utiliser également (séparés par des virgules, facultatif)"
+        type = "string"
+        optional = true
+        bind = "null"
+        example = "wss://relay.example.com, wss://another-relay.example"
+
+        [owner.pair.do_pair]
+        ask.en = "Pair signer"
+        ask.fr = "Associer le signataire"
+        type = "button"
+        style = "success"
+
+    [owner.approve]
+    name.en = "Approve a pending operation"
+    name.fr = "Approuver une opération en attente"
+    help.en = "For a high-risk operation (system.upgrade, backup restore, ...) an agent told you is waiting on your approval. Paste the confirmation_id it gave you - this asks your paired signer to review and sign, same as running yunohost-mcp-approve yourself. Requires pairing first (see above)."
+    help.fr = "Pour une opération à haut risque (system.upgrade, restauration de sauvegarde, ...) qu'un agent vous a signalée comme étant en attente de votre approbation. Collez le confirmation_id qu'il vous a communiqué - votre signataire associé sera invité à examiner et signer, comme si vous exécutiez vous-même yunohost-mcp-approve. Nécessite une association préalable (voir ci-dessus)."
+
+        [owner.approve.approve_confirmation_id]
+        ask.en = "confirmation_id"
+        ask.fr = "confirmation_id"
+        type = "string"
+        optional = true
+        bind = "null"
+        example = "confirm-194760de45814a0fa65d"
+
+        [owner.approve.do_approve]
+        ask.en = "Approve"
+        ask.fr = "Approuver"
+        type = "button"
+        style = "success"

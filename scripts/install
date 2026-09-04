@@ -50,6 +50,15 @@ ynh_systemctl --service="$app" --action="start" \
 	--wait_until="Uvicorn running on"
 
 #=================================================
+# OPTIONAL: PAIR THE OWNER'S NIP-46 SIGNER
+#=================================================
+
+if [ "${pair_owner_signer_now:-0}" -eq 1 ]; then
+	ynh_script_progression "Pairing your NIP-46 signer for owner approvals..."
+	yunohost_mcp_pair_signer "$admin_npub"
+fi
+
+#=================================================
 # END OF SCRIPT
 #=================================================
 yunohost_mcp_print_connection_info "$domain"

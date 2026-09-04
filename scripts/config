@@ -14,6 +14,9 @@ ynh_abort_if_errors
 
 install_dir=$(ynh_app_setting_get --key=install_dir)
 data_dir=$(ynh_app_setting_get --key=data_dir)
+domain=$(ynh_app_setting_get --key=domain)
+path=$(ynh_app_setting_get --key=path)
+admin_npub=$(ynh_app_setting_get --key=admin_npub)
 
 #=================================================
 # SHARED PYTHON HELPER
@@ -215,6 +218,14 @@ _ymcp_fix_perms() {
 	chmod 640 "$1"
 }
 
+# Same NIP-46 pairing session install's optional pair_owner_signer_now
+# step creates (_common.sh's yunohost_mcp_approve_session_file) - the
+# config panel's Pair/Approve actions below reuse it rather than each
+# pairing separately.
+_ymcp_approve_bin() {
+	"$install_dir/venv/bin/yunohost-mcp-approve" --session-file "$(yunohost_mcp_approve_session_file)" "$@"
+}
+
 #=================================================
 # GETTERS
 #=================================================
@@ -239,6 +250,24 @@ get__edit_npub() {
 
 get__revoke_npub() {
 	_ymcp_identity_tool choices "$data_dir/identity.toml"
+}
+
+get__pairing_status() {
+	local status
+	status="$(_ymcp_approve_bin status 2>&1)"
+	local summary
+	if echo "$status" | grep -q "^paired: true"; then
+		local signer_pubkey
+		signer_pubkey="$(echo "$status" | sed -n 's/^signer_pubkey: //p')"
+		summary="Paired with signer $signer_pubkey. Use Approve a pending operation below when an agent gives you a confirmation_id, or Pair again to switch signer apps."
+	else
+		summary="Not paired yet. Owner-gated operations (system.upgrade, backup restore, ...) cannot be approved until you pair a NIP-46 signer app - click Pair below."
+	fi
+	cat <<EOF
+ask:
+  en: |
+$(echo "$summary" | sed 's/^/    /')
+EOF
 }
 
 #=================================================
@@ -282,6 +311,46 @@ run__do_revoke() {
 		|| ynh_die "Could not revoke access - see the error above"
 	_ymcp_fix_perms "$data_dir/identity.toml"
 	ynh_print_info "Revoked $revoke_npub - effective immediately, no restart needed"
+}
+
+run__do_pair() {
+	# --repair: config panel actions are always deliberate re-runs (there's
+	# no separate "first time" UI state to distinguish), so always allow
+	# re-pairing rather than dying with "already paired" on a second click -
+	# e.g. after switching signer apps or losing the paired device.
+	#
+	# --owner-npub: prefers relays from the owner's own NIP-65 list over
+	# the plain defaults (see approve.py's resolve_pair_relays). Any
+	# comma-separated pair_extra_relays are folded in on top of that -
+	# repeated --extra-relay flags, not a single comma-joined value.
+	local extra_relay_args=()
+	if [ -n "${pair_extra_relays:-}" ]; then
+		IFS=',' read -ra _extra <<<"$pair_extra_relays"
+		for relay in "${_extra[@]}"; do
+			relay="$(echo "$relay" | xargs)"
+			[ -n "$relay" ] && extra_relay_args+=(--extra-relay "$relay")
+		done
+	fi
+
+	ynh_print_info "Open the link/QR below in your NIP-46 signer app within the next couple of minutes..."
+	_ymcp_approve_bin pair --repair --owner-npub "$admin_npub" "${extra_relay_args[@]}" \
+		|| ynh_die "Pairing did not complete - see the output above (timed out, or was rejected by the signer)"
+	chown "$app:$app" "$(yunohost_mcp_approve_session_file)"
+	chmod 600 "$(yunohost_mcp_approve_session_file)"
+	ynh_print_info "Signer paired - owner-gated operations can now be approved below."
+}
+
+run__do_approve() {
+	[ -n "${approve_confirmation_id:-}" ] || ynh_die "Enter the confirmation_id an agent gave you"
+
+	# --yes: clicking this button *is* the owner's explicit confirmation -
+	# yunohost-mcp-approve's own operation_plan/operation_hash output
+	# (printed below) is what the owner is expected to have read first,
+	# same as the interactive CLI's own "yes" prompt would have shown.
+	_ymcp_approve_bin approve --server "https://${domain}${path%/}/mcp" \
+		--confirmation-id "$approve_confirmation_id" --yes \
+		|| ynh_die "Approval failed - see the output above"
+	ynh_print_info "Approved $approve_confirmation_id - the requester can now retry its original call."
 }
 
 #=================================================

@@ -3,6 +3,35 @@
 # PACKAGE-SPECIFIC HELPERS
 #=================================================
 
+# Where the owner's NIP-46 pairing session (yunohost-mcp-approve's own
+# app-channel keypair + reconnectable bunker:// URI - never the owner's
+# real key) is persisted, shared between the optional install-time pairing
+# step and every later config-panel pairing/approval action so they all
+# reuse the same paired session instead of re-pairing each time.
+yunohost_mcp_approve_session_file() {
+	echo "$data_dir/approve-session.json"
+}
+
+# Best-effort, optional pairing with the owner's NIP-46 signer app -
+# offered at install time (see manifest.toml's pair_owner_signer_now) so
+# owner approvals (system.upgrade, backup restore, ...) work out of the
+# box, but never fatal to install: a signer that isn't ready yet, or an
+# owner who'd rather do this later from the config panel, must not break
+# setup. Prints the pairing link/QR to the live install log either way.
+yunohost_mcp_pair_signer() {
+	local owner_npub="$1"
+
+	ynh_print_info "Pairing your NIP-46 signer for owner approvals - open the link/QR below in your signer app within the next couple of minutes..."
+	if "$install_dir/venv/bin/yunohost-mcp-approve" pair \
+		--session-file "$(yunohost_mcp_approve_session_file)" --timeout 120 --owner-npub "$owner_npub"; then
+		ynh_print_info "Signer paired - owner-approval operations (system.upgrade, backup restore, ...) can now be approved via yunohost-mcp-approve or the config panel."
+	else
+		ynh_print_warn "Signer pairing did not complete (timed out, or was skipped) - this is optional and can be redone anytime from the config panel's Owner approval section, or by running yunohost-mcp-approve pair over SSH."
+	fi
+	chown "$app:$app" "$(yunohost_mcp_approve_session_file)" 2>/dev/null || true
+	chmod 600 "$(yunohost_mcp_approve_session_file)" 2>/dev/null || true
+}
+
 # Create the app's Python virtual environment and install yunohost-mcp
 # (and its dependencies - mcp, coincurve, pydantic, ...) into it from the
 # unpacked source tree in $install_dir. Runs as root (this package's own

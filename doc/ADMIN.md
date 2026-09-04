@@ -42,14 +42,23 @@ An entry with no `expires` never expires. Removing an entry (or letting it expir
 
 The **owner** who approves is fixed at install time to the npub you gave the install form (`admin_npub`) — see `YUNOHOST_MCP_OWNER_NPUB` in `conf/systemd.service`. This is deliberate and explicit: granting a second (or third) `administrator` identity later, from the config panel or `identity.toml` directly, does **not** change who the owner is or split approval authority — it stays pinned to the original install-time npub regardless of how many administrators exist.
 
-To review and approve a pending operation, the owner runs the upstream [`yunohost-mcp-approve`](https://github.com/imattau/yunohost-mcp#approving-high-risk-operations-yunohost-mcp-approve) tool from their own machine, on whatever device holds their [NIP-46](https://nips.nostr.com/46) remote signer app (Amber, nsec.app, ...) — the owner's private key never touches this server, nor the requesting agent's machine:
+**Webadmin (no SSH needed):** Apps → YunoHost MCP → Config panel → *Owner approval*. This is offered as an optional, recommended step at install time too (have your signer app open and ready before continuing installation — it waits briefly for pairing, but never fails the install if you skip it or it times out):
+
+- *Signer status* shows whether a NIP-46 signer is paired yet.
+- *Pair or re-pair your signer* prints a one-time `nostrconnect://` link and QR code — open/scan it in your signer app (Amber, nsec.app, ...). Safe to re-run any time, e.g. after switching signer apps. It automatically looks up your own published relay list (NIP-65) from your npub and prefers those relays, falling back to a small set of sane defaults if you haven't published one — either way, plus any *Additional relays* you list there.
+- *Approve a pending operation* takes the `confirmation_id` an agent gives you and asks your paired signer to review and sign it — clicking the button is your explicit approval, same as typing `yes` on the CLI below.
+
+**SSH, using the CLI directly:** the owner runs the upstream [`yunohost-mcp-approve`](https://github.com/imattau/yunohost-mcp#approving-high-risk-operations-yunohost-mcp-approve) tool from their own machine, on whatever device holds their [NIP-46](https://nips.nostr.com/46) remote signer app (Amber, nsec.app, ...) — the owner's private key never touches this server, nor the requesting agent's machine:
 
 ```
 yunohost-mcp-approve pair                 # one-time
+yunohost-mcp-approve status               # check pairing state without a live round trip
 yunohost-mcp-approve approve --server https://your-domain/mcp --confirmation-id confirm-...
 ```
 
 It fetches the authoritative pending-operation record from the server (`approval_get`/`approval_status` MCP tools — never a locally-supplied claim), displays the exact tool, arguments, and `operation_hash`, and requires typing `yes` before submitting a NIP-98-signed `approve_operation` call. Once approved, the original requester can retry its call; approving does not itself execute anything.
+
+Either path uses the same paired session — pairing once (via either the webadmin or the CLI) is enough for both.
 
 This is v1's `solo` profile: one owner, no multi-party threshold. Household/team/multi-owner approval is documented as a future direction upstream, not something this package currently supports.
 
