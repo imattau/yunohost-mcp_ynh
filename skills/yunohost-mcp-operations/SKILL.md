@@ -41,8 +41,8 @@ Role names are convenience bundles over scopes and can be combined. Use `whoami`
 
 - `readonly`: use only inspection, diagnosis, status, logs, update metadata, backup listing, package/catalog inspection and verification.
 - `operator`: readonly plus service restarts and creating backups.
-- `app-admin`: operator plus normal app install/upgrade/remove, domain writes, user writes/deletion, and backup restore. High-risk actions still require policy confirmation and, where configured, owner approval.
-- `package-developer`: readonly plus package test lifecycle, app install/upgrade/remove for testing, backup creation, domain writes, and catalog publication. Package tests are intended for fast iteration but can mutate the server.
+- `app-admin`: operator plus normal app install/upgrade/remove, app config-panel writes, domain writes, user writes/deletion, and backup restore. High-risk actions still require policy confirmation and, where configured, owner approval.
+- `package-developer`: everything app-admin has, plus package test lifecycle and catalog publication. Roles below `administrator` are strictly hierarchical (readonly < operator < app-admin < package-developer) - each includes everything the one before it does.
 - `administrator`: all scopes, including audit reads and the `owner.approve` scope `approve_operation` requires. Holding this role is necessary but not sufficient to actually approve an owner-gated operation - the caller must also be this server's one configured owner (fixed at install time), not merely any administrator. This does not make unsafe requests automatically appropriate.
 
 ## Common workflows

@@ -4,19 +4,19 @@ This is a reviewed snapshot of the upstream tool inventory and policy model. The
 
 ## Scopes and roles
 
-Scopes: `server.read`, `diagnosis.read`, `apps.read`, `apps.install`, `apps.upgrade`, `apps.remove`, `services.read`, `services.restart`, `logs.read`, `backups.read`, `backups.create`, `backups.restore`, `users.read`, `users.write`, `users.delete`, `domains.read`, `domains.write`, `system.update`, `system.upgrade`, `system.migrate`, `firewall.read`, `firewall.write`, `packages.inspect`, `packages.test`, `catalog.inspect`, `catalog.verify`, `catalog.publish`, `audit.read`, and `owner.approve`.
+Scopes: `server.read`, `diagnosis.read`, `apps.read`, `apps.install`, `apps.upgrade`, `apps.remove`, `apps.config.read`, `apps.config.write`, `services.read`, `services.restart`, `logs.read`, `backups.read`, `backups.create`, `backups.restore`, `users.read`, `users.write`, `users.delete`, `domains.read`, `domains.write`, `system.update`, `system.upgrade`, `system.migrate`, `firewall.read`, `firewall.write`, `packages.inspect`, `packages.test`, `catalog.inspect`, `catalog.verify`, `catalog.publish`, `audit.read`, and `owner.approve`.
 
-Role bundles:
+Role bundles (strictly hierarchical below `administrator` - each a superset of the one before, plus its own scopes):
 
 | Role | Capability |
 |---|---|
-| `readonly` | All read scopes: server/diagnosis/apps/services/logs/backups/users/domains, system update metadata, package inspection, catalog inspection and verification |
+| `readonly` | All read scopes: server/diagnosis/apps/services/logs/backups/users/domains/app-config, system update metadata, package inspection, catalog inspection and verification |
 | `operator` | `readonly` plus `services.restart`, `backups.create` |
-| `app-admin` | `operator` plus `apps.install`, `apps.upgrade`, `apps.remove`, `backups.restore`, `domains.write`, `users.write`, `users.delete` |
-| `package-developer` | `readonly` plus `packages.test`, `apps.install`, `apps.upgrade`, `apps.remove`, `backups.create`, `catalog.publish`, `domains.write` |
+| `app-admin` | `operator` plus `apps.install`, `apps.upgrade`, `apps.remove`, `apps.config.write`, `backups.restore`, `domains.write`, `users.write`, `users.delete` |
+| `package-developer` | `app-admin` plus `packages.test`, `catalog.publish` |
 | `administrator` | Every scope, including `audit.read` and `owner.approve` |
 
-Role bundles are not strictly hierarchical: `package-developer` is not `app-admin`, and roles combine by union. An identity with no roles has no operational scopes. A valid NIP-98 signature authenticates identity; it does not grant authorization.
+An identity with no roles has no operational scopes. A valid NIP-98 signature authenticates identity; it does not grant authorization.
 
 ## Tool inventory by capability
 
@@ -39,6 +39,8 @@ Role bundles are not strictly hierarchical: `package-developer` is not `app-admi
 
 - `apps_list`, `app_info`, `app_resources`
 - `app_install`, `app_upgrade`, `app_remove`, `app_change_url`
+- `app_config_get` — read an installed app's config-panel settings; call with `full=True` first to see the exact dotted key path before writing.
+- `app_config_set` — write one config-panel setting (`apps.config.write`, confirmation-gated). `key` must be the exact dotted `<panel>.<section>.<option>` id from `app_config_get(..., full=True)`, not a label or bare option name - a panel can reuse the same option name across sections.
 - `plan_app_upgrade`, `execute_plan`, `safe_upgrade`, `repair_app`
 - `updates_check`, `updates_refresh`
 
@@ -82,6 +84,7 @@ The built-in policy requires:
 |---|---|
 | `catalog_publish` | confirmation |
 | `domain_add` | confirmation |
+| `app_config_set` | confirmation |
 | `app_upgrade` / `execute_plan` / `safe_upgrade` | recent backup and at least 2 GB free; hard blockers, not confirmable overrides |
 | `app_remove` | confirmation and backup within 24 hours by default |
 | `backup_restore` | confirmation plus the server's owner approving via `approve_operation` |
