@@ -16,7 +16,7 @@ This writes the key (0600; refuses to overwrite an existing file) and prints its
 
 ## Granting access: identity.toml
 
-`$data_dir/identity.toml` (typically `/home/yunohost.app/yunohost_mcp/identity.toml`) is the access-control file. Your own npub was seeded into it at install time as `administrator`. Two ways to grant another identity access:
+`$data_dir/identity.toml` (typically `/home/yunohost.app/yunohost_mcp/identity.toml`) is the access-control file. Your own npub was seeded into it at install time as `administrator`. Note that the `administrator` role and being the **owner** (see "Owner approval" below) are separate things: granting another identity `administrator` here gives it every scope *except* the authority to approve owner-gated operations — that stays with the install-time npub regardless. Two ways to grant another identity access:
 
 - **Webadmin (no SSH needed):** Apps → YunoHost MCP → Config panel → *Agent access* → *Grant a new identity*. Enter the agent's npub, a display name, pick a role, and optionally an expiry date, then click *Grant access*. The same tab's *Current identities* section shows everyone currently granted, and *Revoke an identity* removes one by npub (it refuses to remove the last remaining administrator, to stop you locking yourself out by accident).
 - **SSH, editing the file directly:**
@@ -36,9 +36,22 @@ An entry with no `expires` never expires. Removing an entry (or letting it expir
 
 `$data_dir/policy.toml` overrides the built-in defaults (a recent backup + minimum free space required before an app upgrade proceeds; app removal, backup restore, and system upgrade all require confirmation; the latter two additionally require a second identity's approval). See the upstream repo's `src/yunohost_mcp/policy/rules.py` for the exact schema — this file is optional; a missing one means the defaults apply unmodified.
 
-## Owner co-signing
+## Owner approval
 
-`system_upgrade` and `backup_restore` require two independently signed calls from two *different* identities before they execute: one requests the operation, a different one (holding the `administrator` role) calls `approve_operation` on the resulting `confirmation_id`, then the original requester executes it. No single agent identity can perform either operation alone, by design.
+`system_upgrade`, `backup_restore`, `system_migrate`, `user_delete`/`user_group_delete`, permission changes, and firewall changes all need a second, independently signed approval on top of the requester's own confirmation before they execute — an agent's own signature is never enough by itself for these.
+
+The **owner** who approves is fixed at install time to the npub you gave the install form (`admin_npub`) — see `YUNOHOST_MCP_OWNER_NPUB` in `conf/systemd.service`. This is deliberate and explicit: granting a second (or third) `administrator` identity later, from the config panel or `identity.toml` directly, does **not** change who the owner is or split approval authority — it stays pinned to the original install-time npub regardless of how many administrators exist.
+
+To review and approve a pending operation, the owner runs the upstream [`yunohost-mcp-approve`](https://github.com/imattau/yunohost-mcp#approving-high-risk-operations-yunohost-mcp-approve) tool from their own machine, on whatever device holds their [NIP-46](https://nips.nostr.com/46) remote signer app (Amber, nsec.app, ...) — the owner's private key never touches this server, nor the requesting agent's machine:
+
+```
+yunohost-mcp-approve pair                 # one-time
+yunohost-mcp-approve approve --server https://your-domain/mcp --confirmation-id confirm-...
+```
+
+It fetches the authoritative pending-operation record from the server (`approval_get`/`approval_status` MCP tools — never a locally-supplied claim), displays the exact tool, arguments, and `operation_hash`, and requires typing `yes` before submitting a NIP-98-signed `approve_operation` call. Once approved, the original requester can retry its call; approving does not itself execute anything.
+
+This is v1's `solo` profile: one owner, no multi-party threshold. Household/team/multi-owner approval is documented as a future direction upstream, not something this package currently supports.
 
 ## The audit trail
 

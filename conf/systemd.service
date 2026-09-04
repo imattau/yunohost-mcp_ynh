@@ -18,6 +18,13 @@ WorkingDirectory=__INSTALL_DIR__/
 Environment=PATH=__INSTALL_DIR__/venv/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Environment=YUNOHOST_MCP_CONFIG_DIR=__DATA_DIR__
 Environment=YUNOHOST_MCP_FAKE_YUNOHOST=false
+# Owner co-signing (v0.5.0+, upstream owner-approval-plan.md's `solo`
+# profile): pinned explicitly to the install-time admin_npub, rather than
+# left to fall back on "whichever single identity.toml entry holds the
+# administrator role" - granting a second administrator later (doc/ADMIN.md,
+# the config panel's "Grant a new identity") must not silently make owner
+# resolution ambiguous and lock out approve_operation.
+Environment=YUNOHOST_MCP_OWNER_NPUB=__ADMIN_NPUB__
 ExecStart=__INSTALL_DIR__/venv/bin/yunohost-mcp --transport http --host 127.0.0.1 --port __PORT__
 Restart=always
 RestartSec=5

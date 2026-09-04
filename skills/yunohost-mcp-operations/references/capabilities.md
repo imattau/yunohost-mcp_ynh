@@ -4,7 +4,7 @@ This is a reviewed snapshot of the upstream tool inventory and policy model. The
 
 ## Scopes and roles
 
-Scopes: `server.read`, `diagnosis.read`, `apps.read`, `apps.install`, `apps.upgrade`, `apps.remove`, `services.read`, `services.restart`, `logs.read`, `backups.read`, `backups.create`, `backups.restore`, `users.read`, `users.write`, `users.delete`, `domains.read`, `domains.write`, `system.update`, `system.upgrade`, `packages.inspect`, `packages.test`, `catalog.inspect`, `catalog.verify`, `catalog.publish`, `audit.read`, and `owner.approve`.
+Scopes: `server.read`, `diagnosis.read`, `apps.read`, `apps.install`, `apps.upgrade`, `apps.remove`, `services.read`, `services.restart`, `logs.read`, `backups.read`, `backups.create`, `backups.restore`, `users.read`, `users.write`, `users.delete`, `domains.read`, `domains.write`, `system.update`, `system.upgrade`, `system.migrate`, `firewall.read`, `firewall.write`, `packages.inspect`, `packages.test`, `catalog.inspect`, `catalog.verify`, `catalog.publish`, `audit.read`, and `owner.approve`.
 
 Role bundles:
 
@@ -25,7 +25,8 @@ Role bundles are not strictly hierarchical: `package-developer` is not `app-admi
 - `whoami` — resolved caller identity, roles, and scopes.
 - `server_identity` — server npub/hex identity needed when constructing delegations.
 - `audit_list`, `audit_get` — administrator-only audit trail reads.
-- `approve_operation` — administrator owner co-signature for a pending high-risk confirmation; approval does not execute.
+- `approve_operation` — this server's one configured owner approves a pending high-risk confirmation; holding the `administrator` role is necessary but not sufficient (the caller must be the exact owner pubkey). Approval does not execute the operation.
+- `approval_get`, `approval_status` — authoritative pending-confirmation record (tool, arguments, `operation_hash`, expiry, approval state), visible to the confirmation's own requester or the owner only. What `yunohost-mcp-approve` calls before asking the owner to sign anything - prefer these over trusting a locally-supplied plan.
 
 ### Server, diagnosis, and operations
 
@@ -37,13 +38,21 @@ Role bundles are not strictly hierarchical: `package-developer` is not `app-admi
 ### Apps and updates
 
 - `apps_list`, `app_info`, `app_resources`
-- `app_install`, `app_upgrade`, `app_remove`
+- `app_install`, `app_upgrade`, `app_remove`, `app_change_url`
 - `plan_app_upgrade`, `execute_plan`, `safe_upgrade`, `repair_app`
 - `updates_check`, `updates_refresh`
 
 ### Backups
 
 - `backups_list`, `backup_create`, `backup_restore`
+
+### System migrations
+
+- `migrations_list`, `migrations_state`, `migrations_run`
+
+### Firewall
+
+- `firewall_list`, `firewall_is_open`, `firewall_open`, `firewall_close`, `firewall_reload`
 
 ### Domains
 
@@ -75,12 +84,16 @@ The built-in policy requires:
 | `domain_add` | confirmation |
 | `app_upgrade` / `execute_plan` / `safe_upgrade` | recent backup and at least 2 GB free; hard blockers, not confirmable overrides |
 | `app_remove` | confirmation and backup within 24 hours by default |
-| `backup_restore` | confirmation plus different administrator identity co-signature |
-| `system_upgrade` | confirmation plus different administrator identity co-signature |
+| `backup_restore` | confirmation plus the server's owner approving via `approve_operation` |
+| `system_upgrade` | confirmation plus owner approval |
+| `migrations_run` | confirmation plus owner approval |
 | `user_create` / `user_update` | confirmation |
-| `user_delete` | confirmation plus different administrator identity co-signature |
+| `user_delete` | confirmation plus owner approval |
 | `user_group_create` / `user_group_update` | confirmation |
-| `user_group_delete` | confirmation plus different administrator identity co-signature |
-| `user_permission_add` / `user_permission_remove` | confirmation plus different administrator identity co-signature |
+| `user_group_delete` | confirmation plus owner approval |
+| `user_permission_add` / `user_permission_remove` | confirmation plus owner approval |
+| `firewall_open` / `firewall_close` / `firewall_reload` | confirmation plus owner approval |
+
+"Owner approval" above means: the server's one configured owner (fixed at install time, independent of who else holds the `administrator` role) separately signs an `approve_operation` call, typically through `yunohost-mcp-approve`'s NIP-46 flow - the requester's own signature never satisfies this by itself. See `approval_get`/`approval_status` above for how to check status without guessing.
 
 The local `policy.toml` may change confirmation settings, but the live server's response is authoritative. Every write is serialized and audited; responses are redacted for secret-shaped values.

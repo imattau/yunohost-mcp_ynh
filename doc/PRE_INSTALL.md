@@ -2,6 +2,8 @@
 
 You'll need a Nostr keypair (any Nostr client — a browser extension like nos2x/Alby, a mobile app, or `nostr-tools`/similar for a fresh one works) and its **npub** (public key). This install form asks for it and grants it the `administrator` role, so the account that just installed the server isn't immediately locked out — `identity.toml` starts out empty otherwise, and this server denies everything by default until an identity is explicitly granted access.
 
+This same npub also becomes the **owner** — the one identity able to approve high-risk operations (system upgrade, backup restore, firewall changes, and a few others) that an agent's own signature alone can never authorize. Approving needs a [NIP-46](https://nips.nostr.com/46) remote signer app (Amber, nsec.app, ...) capable of holding this key, not just the ability to view an npub — see `doc/ADMIN.md` after install for how approval works.
+
 Your **private** key never needs to touch this server. The npub you give here is a public identity, not a secret.
 
 ## Domain

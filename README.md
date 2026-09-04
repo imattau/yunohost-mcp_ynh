@@ -6,7 +6,7 @@
 
 A [Model Context Protocol](https://modelcontextprotocol.io) server that lets AI coding agents (Claude, Codex, and other MCP clients) inspect, diagnose, and administer this YunoHost server — and develop/test `_ynh` app packages — through typed, policy-controlled tools, instead of arbitrary shell access.
 
-Every request authenticates with a [NIP-98](https://github.com/nostr-protocol/nips/blob/master/98.md) signed Nostr event, not a YunoHost user account. What that identity is allowed to do is a separate, explicit decision made from an `identity.toml` file you control — a valid signature only proves *who*, never *what*. Reads are broad by default; writes are scope-gated, policy-checked (backup and free-space requirements before an upgrade, for instance), and audited, and the riskiest operations (system upgrade, backup restore) require a second, independent signature from a different identity before they execute.
+Every request authenticates with a [NIP-98](https://github.com/nostr-protocol/nips/blob/master/98.md) signed Nostr event, not a YunoHost user account. What that identity is allowed to do is a separate, explicit decision made from an `identity.toml` file you control — a valid signature only proves *who*, never *what*. Reads are broad by default; writes are scope-gated, policy-checked (backup and free-space requirements before an upgrade, for instance), and audited, and the riskiest operations (system upgrade, backup restore, firewall changes, and a few others) require the server's configured **owner** to separately approve them through their own [NIP-46](https://nips.nostr.com/46) remote signer, using the `yunohost-mcp-approve` tool — an agent's own signature is never enough by itself.
 
 🛠️ Upstream project: <https://github.com/imattau/yunohost-mcp>
 
@@ -28,9 +28,9 @@ One install-time question:
 
 | Setting | Description |
 |---|---|
-| **Your npub** | The Nostr public key granted the `administrator` role on install, so you aren't locked out of your own server. |
+| **Your npub** | The Nostr public key granted the `administrator` role on install, so you aren't locked out of your own server. This same npub is also the server's **owner** — the identity that approves high-risk operations. |
 
-See [`doc/ADMIN.md`](doc/ADMIN.md) for granting further identities access, adjusting safety policy, the audit trail, and owner co-signing; [`doc/PRE_INSTALL.md`](doc/PRE_INSTALL.md) for what you need before installing.
+See [`doc/ADMIN.md`](doc/ADMIN.md) for granting further identities access, adjusting safety policy, the audit trail, and owner approval; [`doc/PRE_INSTALL.md`](doc/PRE_INSTALL.md) for what you need before installing.
 
 ## Requirements
 
