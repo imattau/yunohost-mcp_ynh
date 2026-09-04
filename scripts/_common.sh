@@ -46,6 +46,13 @@ yunohost_mcp_install_venv() {
 	python3 -m venv --system-site-packages "$install_dir/venv"
 	ynh_hide_warnings "$install_dir/venv/bin/pip" install --upgrade pip
 	ynh_hide_warnings "$install_dir/venv/bin/pip" install "$install_dir"
+	# qrcode is an optional dependency of yunohost-mcp-approve upstream
+	# (approve.py's _print_qr_if_available falls back to text-only without
+	# it, silently) - installed explicitly here so the owner-approval
+	# pairing flow (install's pair_owner_signer_now, and the config
+	# panel's Pair action) actually shows a scannable QR code rather than
+	# just a link, both of which this package relies on.
+	ynh_hide_warnings "$install_dir/venv/bin/pip" install qrcode
 }
 
 # Seed identity.toml on first install with the admin's own npub as
