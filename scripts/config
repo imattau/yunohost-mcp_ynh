@@ -368,6 +368,26 @@ run__do_revoke() {
 	ynh_print_info "Revoked $revoke_npub - effective immediately, no restart needed"
 }
 
+run__do_resync_relays() {
+	local status
+	status="$(_ymcp_approve_bin status 2>&1)"
+	if echo "$status" | grep -q "^paired: true"; then
+		ynh_print_info "Already paired - nothing to sync. Revoke/re-pair below if you want to change signer or relays."
+		return
+	fi
+
+	# --regenerate: this button's whole point is retrying the NIP-65
+	# lookup even though a cached offer already exists (get__pairing_status
+	# above would otherwise just keep reusing it) - a fresh offer/code is
+	# an unavoidable side effect of actually re-running discovery, since
+	# the old code's relay= params can't be edited in place.
+	ynh_print_info "Looking up your relay list again..."
+	_ymcp_approve_bin offer --owner-npub "$admin_npub" --regenerate >/dev/null \
+		|| ynh_die "Could not refresh the relay list - see the output above"
+	_ymcp_fix_approve_file_perms
+	ynh_print_info "Done - reload this panel (or scroll up) to see the refreshed code in Signer status."
+}
+
 run__do_pair() {
 	# --repair: config panel actions are always deliberate re-runs (there's
 	# no separate "first time" UI state to distinguish), so always allow

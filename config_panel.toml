@@ -176,6 +176,14 @@ services = []
         style = "info"
         # Filled dynamically by get__pairing_status in scripts/config.
 
+        [owner.status.do_resync_relays]
+        ask.en = "Refresh relay list"
+        ask.fr = "Actualiser la liste de relais"
+        type = "button"
+        style = "info"
+        help.en = "Not paired yet? The code above was generated once and reused since - if you've since published a relay list (or just want to retry a lookup that may have timed out), click this to look it up again and get a fresh code that uses it. Already paired? Nothing to do here."
+        help.fr = "Pas encore associé ? Le code ci-dessus a été généré une fois puis réutilisé depuis - si vous avez publié une liste de relais depuis (ou souhaitez simplement relancer une recherche qui a pu expirer), cliquez ici pour la rechercher à nouveau et obtenir un nouveau code qui l'utilise. Déjà associé ? Rien à faire ici."
+
     [owner.pair]
     name.en = "Pair or re-pair your signer"
     name.fr = "Associer ou réassocier votre signataire"
