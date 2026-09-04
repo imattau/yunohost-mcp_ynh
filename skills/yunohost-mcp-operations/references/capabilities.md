@@ -75,6 +75,7 @@ An identity with no roles has no operational scopes. A valid NIP-98 signature au
 ### Catalog
 
 - `catalog_package_inspect`, `catalog_publish_plan`, `catalog_verify`, `catalog_publish`
+- `catalog_list` — the whole catalogue (every declared app across every publisher, trust-filtered), queried fresh from the configured relays on every call - not just this server's own `apps_list`. Use this to answer "what's available in the catalogue" rather than assuming installed apps are the full picture.
 
 ## Policy gates
 
