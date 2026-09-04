@@ -361,15 +361,27 @@ run__do_revoke() {
 }
 
 run__do_pair() {
-	# Normally reuses whichever offer get__pairing_status above already
-	# generated and displayed - the point of the offer/pair split is that
-	# this click completes pairing against the exact code the owner just
-	# saw and scanned, not a freshly-generated one.
-	#
 	# --repair: config panel actions are always deliberate re-runs (there's
 	# no separate "first time" UI state to distinguish), so always allow
 	# re-pairing rather than dying with "already paired" on a second click -
 	# e.g. after switching signer apps or losing the paired device.
+
+	if [ -n "${pair_bunker_uri:-}" ]; then
+		# Bypasses the whole offer/QR path entirely - the signer's own
+		# exported connection string already fully describes how to reach
+		# it, so this connects immediately rather than waiting on anything.
+		ynh_print_info "Connecting to the pasted bunker:// signer..."
+		_ymcp_approve_bin pair --repair --bunker-uri "$pair_bunker_uri" \
+			|| ynh_die "Could not pair with that bunker:// URI - see the output above (check it's current and try again)"
+		_ymcp_fix_approve_file_perms
+		ynh_print_info "Signer paired - owner-gated operations can now be approved below."
+		return
+	fi
+
+	# Normally reuses whichever offer get__pairing_status above already
+	# generated and displayed - the point of the offer/pair split is that
+	# this click completes pairing against the exact code the owner just
+	# saw and scanned, not a freshly-generated one.
 	#
 	# Comma-separated pair_extra_relays are folded in as repeated
 	# --extra-relay flags - and, since the already-displayed offer was

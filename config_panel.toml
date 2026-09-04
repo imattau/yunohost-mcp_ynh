@@ -179,8 +179,16 @@ services = []
     [owner.pair]
     name.en = "Pair or re-pair your signer"
     name.fr = "Associer ou réassocier votre signataire"
-    help.en = "The link/QR to scan is already shown above in Signer status - it's generated as soon as you open this panel, before clicking anything, and stays the same across reloads. Click below only once you've scanned it, to complete pairing against that exact code. Relays used: your own published relay list (looked up automatically from your npub) if found, otherwise a small set of sane defaults - either way, plus anything you list below (which also gets you a fresh code, since the one already shown was generated without it)."
-    help.fr = "Le lien/QR à scanner est déjà affiché ci-dessus dans État du signataire - il est généré dès l'ouverture de ce panneau, avant tout clic, et reste identique après un rechargement. Cliquez ci-dessous seulement après l'avoir scanné, pour finaliser l'association avec ce code précis. Relais utilisés : votre propre liste de relais publiée (recherchée automatiquement à partir de votre npub) si trouvée, sinon un petit ensemble de valeurs par défaut raisonnables - dans les deux cas, en plus de ceux listés ci-dessous (ce qui génère aussi un nouveau code, celui déjà affiché ayant été généré sans ces relais)."
+    help.en = "The link/QR to scan is already shown above in Signer status - it's generated as soon as you open this panel, before clicking anything, and stays the same across reloads. Click below only once you've scanned it, to complete pairing against that exact code. Relays used: your own published relay list (looked up automatically from your npub) if found, otherwise a small set of sane defaults - either way, plus anything you list below (which also gets you a fresh code, since the one already shown was generated without it). Alternatively, if your signer app can export a bunker:// connection string itself (its own 'add a connection' feature, separate from scanning a code), paste it below instead - pairs immediately, no code involved."
+    help.fr = "Le lien/QR à scanner est déjà affiché ci-dessus dans État du signataire - il est généré dès l'ouverture de ce panneau, avant tout clic, et reste identique après un rechargement. Cliquez ci-dessous seulement après l'avoir scanné, pour finaliser l'association avec ce code précis. Relais utilisés : votre propre liste de relais publiée (recherchée automatiquement à partir de votre npub) si trouvée, sinon un petit ensemble de valeurs par défaut raisonnables - dans les deux cas, en plus de ceux listés ci-dessous (ce qui génère aussi un nouveau code, celui déjà affiché ayant été généré sans ces relais). Autrement, si votre application signataire peut elle-même exporter une chaîne de connexion bunker:// (sa propre fonction « ajouter une connexion », distincte du scan d'un code), collez-la ci-dessous à la place - association immédiate, sans code."
+
+        [owner.pair.pair_bunker_uri]
+        ask.en = "Or paste a bunker:// URI from your signer app (optional)"
+        ask.fr = "Ou collez une URI bunker:// depuis votre application signataire (facultatif)"
+        type = "string"
+        optional = true
+        bind = "null"
+        example = "bunker://a1b2c3...?relay=wss://relay.example&secret=..."
 
         [owner.pair.pair_extra_relays]
         ask.en = "Additional relays to also use (comma-separated, optional)"
