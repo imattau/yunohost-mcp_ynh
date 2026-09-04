@@ -12,6 +12,15 @@ yunohost_mcp_approve_session_file() {
 	echo "$data_dir/approve-session.json"
 }
 
+# Where a pending, not-yet-consumed pairing offer (yunohost-mcp-approve
+# offer's PendingOffer - a link/QR shown before anything is actually
+# listening for the signer) is persisted, so it can be displayed
+# immediately in the config panel and stays stable across page loads
+# instead of regenerating on every view.
+yunohost_mcp_approve_offer_file() {
+	echo "$data_dir/approve-offer.json"
+}
+
 # Best-effort, optional pairing with the owner's NIP-46 signer app -
 # offered at install time (see manifest.toml's pair_owner_signer_now) so
 # owner approvals (system.upgrade, backup restore, ...) work out of the
@@ -23,13 +32,22 @@ yunohost_mcp_pair_signer() {
 
 	ynh_print_info "Pairing your NIP-46 signer for owner approvals - open the link/QR below in your signer app within the next couple of minutes..."
 	if "$install_dir/venv/bin/yunohost-mcp-approve" pair \
-		--session-file "$(yunohost_mcp_approve_session_file)" --timeout 120 --owner-npub "$owner_npub"; then
+		--session-file "$(yunohost_mcp_approve_session_file)" --offer-file "$(yunohost_mcp_approve_offer_file)" \
+		--timeout 120 --owner-npub "$owner_npub"; then
 		ynh_print_info "Signer paired - owner-approval operations (system.upgrade, backup restore, ...) can now be approved via yunohost-mcp-approve or the config panel."
 	else
-		ynh_print_warn "Signer pairing did not complete (timed out, or was skipped) - this is optional and can be redone anytime from the config panel's Owner approval section, or by running yunohost-mcp-approve pair over SSH."
+		# The offer isn't consumed on a timeout (only on success - see
+		# approve.py's _pair), so the same link/QR just printed above stays
+		# valid and the config panel's Owner approval section will keep
+		# showing it - the owner can finish pairing there without this
+		# ever needing to be redone from scratch.
+		ynh_print_warn "Signer pairing did not complete within the install window - this is optional. The same link/QR shown above is still valid: finish pairing anytime from the config panel's Owner approval section (Apps > YunoHost MCP > Config panel), or by running yunohost-mcp-approve pair over SSH."
 	fi
-	chown "$app:$app" "$(yunohost_mcp_approve_session_file)" 2>/dev/null || true
-	chmod 600 "$(yunohost_mcp_approve_session_file)" 2>/dev/null || true
+	for f in "$(yunohost_mcp_approve_session_file)" "$(yunohost_mcp_approve_offer_file)"; do
+		[ -e "$f" ] || continue
+		chown "$app:$app" "$f" 2>/dev/null || true
+		chmod 600 "$f" 2>/dev/null || true
+	done
 }
 
 # Create the app's Python virtual environment and install yunohost-mcp

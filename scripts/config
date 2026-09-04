@@ -218,13 +218,29 @@ _ymcp_fix_perms() {
 	chmod 640 "$1"
 }
 
-# Same NIP-46 pairing session install's optional pair_owner_signer_now
-# step creates (_common.sh's yunohost_mcp_approve_session_file) - the
-# config panel's Pair/Approve actions below reuse it rather than each
+# Same NIP-46 pairing session (and pending offer) install's optional
+# pair_owner_signer_now step creates (_common.sh's
+# yunohost_mcp_approve_session_file/yunohost_mcp_approve_offer_file) - the
+# config panel's Pair/Approve actions below reuse them rather than each
 # pairing separately.
 _ymcp_approve_bin() {
-	"$install_dir/venv/bin/yunohost-mcp-approve" --session-file "$(yunohost_mcp_approve_session_file)" "$@"
+	"$install_dir/venv/bin/yunohost-mcp-approve" \
+		--session-file "$(yunohost_mcp_approve_session_file)" \
+		--offer-file "$(yunohost_mcp_approve_offer_file)" \
+		"$@"
 }
+
+# The offer/session files are created root-owned (every config script here
+# runs as root) - match identity.toml's app:app ownership so they behave
+# consistently under backup/restore and aren't just a root-only artifact.
+_ymcp_fix_approve_file_perms() {
+	for f in "$(yunohost_mcp_approve_session_file)" "$(yunohost_mcp_approve_offer_file)"; do
+		[ -e "$f" ] || continue
+		chown "$app:$app" "$f"
+		chmod 600 "$f"
+	done
+}
+
 
 #=================================================
 # GETTERS
@@ -259,9 +275,31 @@ get__pairing_status() {
 	if echo "$status" | grep -q "^paired: true"; then
 		local signer_pubkey
 		signer_pubkey="$(echo "$status" | sed -n 's/^signer_pubkey: //p')"
-		summary="Paired with signer $signer_pubkey. Use Approve a pending operation below when an agent gives you a confirmation_id, or Pair again to switch signer apps."
+		summary="Paired with signer $signer_pubkey. Use Approve a pending operation below when an agent gives you a confirmation_id, or Pair or re-pair your signer to switch signer apps."
 	else
-		summary="Not paired yet. Owner-gated operations (system.upgrade, backup restore, ...) cannot be approved until you pair a NIP-46 signer app - click Pair below."
+		# offer (not pair) - persists a stable link/QR without waiting on
+		# anything, so it's shown here directly rather than only ever
+		# appearing inside the Pair action's own scrolling operation log.
+		# Idempotent: same link on every panel load until it expires,
+		# someone actually pairs, or Pair is clicked with different relays.
+		local offer_output
+		offer_output="$(_ymcp_approve_bin offer --owner-npub "$admin_npub" 2>/dev/null)"
+		_ymcp_fix_approve_file_perms
+		local offer_uri
+		offer_uri="$(echo "$offer_output" | head -n1)"
+		local qr
+		qr="$(echo "$offer_output" | tail -n +2)"
+
+		if [ -n "$offer_uri" ]; then
+			summary="Not paired yet. Scan this in your NIP-46 signer app (Amber, nsec.app, ...), then click Pair or re-pair your signer below to complete pairing - this exact code stays valid across page reloads:
+
+$offer_uri
+"
+			[ -n "$qr" ] && summary="$summary
+$qr"
+		else
+			summary="Not paired yet, and could not generate a pairing link right now - click Pair or re-pair your signer below and check its output for details."
+		fi
 	fi
 	cat <<EOF
 ask:
@@ -314,29 +352,34 @@ run__do_revoke() {
 }
 
 run__do_pair() {
+	# Normally reuses whichever offer get__pairing_status above already
+	# generated and displayed - the point of the offer/pair split is that
+	# this click completes pairing against the exact code the owner just
+	# saw and scanned, not a freshly-generated one.
+	#
 	# --repair: config panel actions are always deliberate re-runs (there's
 	# no separate "first time" UI state to distinguish), so always allow
 	# re-pairing rather than dying with "already paired" on a second click -
 	# e.g. after switching signer apps or losing the paired device.
 	#
-	# --owner-npub: prefers relays from the owner's own NIP-65 list over
-	# the plain defaults (see approve.py's resolve_pair_relays). Any
-	# comma-separated pair_extra_relays are folded in on top of that -
-	# repeated --extra-relay flags, not a single comma-joined value.
+	# Comma-separated pair_extra_relays are folded in as repeated
+	# --extra-relay flags - and, since the already-displayed offer was
+	# generated without them, --regenerate is added too so they actually
+	# take effect instead of being silently ignored in favor of the cached
+	# offer.
 	local extra_relay_args=()
 	if [ -n "${pair_extra_relays:-}" ]; then
 		IFS=',' read -ra _extra <<<"$pair_extra_relays"
 		for relay in "${_extra[@]}"; do
 			relay="$(echo "$relay" | xargs)"
-			[ -n "$relay" ] && extra_relay_args+=(--extra-relay "$relay")
+			[ -n "$relay" ] && extra_relay_args+=(--extra-relay "$relay" --regenerate)
 		done
 	fi
 
 	ynh_print_info "Open the link/QR below in your NIP-46 signer app within the next couple of minutes..."
 	_ymcp_approve_bin pair --repair --owner-npub "$admin_npub" "${extra_relay_args[@]}" \
-		|| ynh_die "Pairing did not complete - see the output above (timed out, or was rejected by the signer)"
-	chown "$app:$app" "$(yunohost_mcp_approve_session_file)"
-	chmod 600 "$(yunohost_mcp_approve_session_file)"
+		|| ynh_die "Pairing did not complete - see the output above (timed out, or was rejected by the signer). The same link/QR shown above is still valid - try again, or click this action again for a fresh one."
+	_ymcp_fix_approve_file_perms
 	ynh_print_info "Signer paired - owner-gated operations can now be approved below."
 }
 
