@@ -301,32 +301,43 @@ get__revoke_npub() {
 }
 
 get__group_user() {
-	local users_json
-	users_json="$(yunohost user list --output-as-json 2>/dev/null)" || users_json=""
-	if [ -z "$users_json" ]; then
-		printf 'choices:\n  placeholder: "(could not load YunoHost users)"\n'
-		return
-	fi
-	printf '%s' "$users_json" | python3 -c '
+	# Use NSS directly rather than `yunohost user list`: group-backed
+	# authorization already depends on NSS, and this avoids invoking
+	# Moulinette's authenticated LDAP API merely to populate a dropdown.
+	# YunoHost user accounts use uid >= 1000; app/system service accounts do
+	# not appear in this selector. The GECOS field normally contains the
+	# user's full name.
+	local users
+	users="$(getent passwd 2>/dev/null | /usr/bin/python3 -c '
 import json
 import sys
 
-try:
-    data = json.load(sys.stdin)
-except (ValueError, OSError):
-    print("choices:\n  placeholder: \"(could not load YunoHost users)\"")
-    raise SystemExit
-users = data.get("users", data)
+choices = {}
+for line in sys.stdin:
+    fields = line.rstrip("\\n").split(":", 6)
+    if len(fields) != 7:
+        continue
+    username, gecos = fields[0], fields[4]
+    try:
+        uid = int(fields[2])
+    except ValueError:
+        continue
+    if uid < 1000 or username in {"root", "nobody"}:
+        continue
+    fullname = gecos.split(",", 1)[0].strip()
+    choices[username] = f"{fullname} ({username})" if fullname else username
 print("choices:")
-if not isinstance(users, dict) or not users:
-    print("  placeholder: \"(no YunoHost users found)\"")
+if not choices:
+    print("  placeholder: \\\"(no YunoHost users found)\\\"")
 else:
-    for username, details in sorted(users.items()):
-        label = username
-        if isinstance(details, dict) and details.get("fullname"):
-            label = f"{details[\"fullname\"]} ({username})"
-        print(f"  {json.dumps(username)}: {json.dumps(label)}")
-'
+    for username in sorted(choices):
+        print(f"  {json.dumps(username)}: {json.dumps(choices[username])}")
+')"
+	if [ -z "$users" ]; then
+		printf 'choices:\n  placeholder: "(could not load YunoHost users from NSS)"\n'
+		return
+	fi
+	printf '%s\n' "$users"
 }
 
 get__group_assignments() {
