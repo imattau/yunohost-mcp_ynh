@@ -16,6 +16,9 @@ Environment=YUNOHOST_MCP_CONFIG_DIR=__DATA_DIR__
 Environment=YUNOHOST_MCP_FAKE_YUNOHOST=false
 Environment=YUNOHOST_MCP_BROKER_SOCKET_PATH=/run/yunohost_mcp/broker.sock
 Environment=YUNOHOST_MCP_CONFIRMATION_STORE_FILE=__DATA_DIR__/confirmations.sqlite
+# Package install/backup/restore test cycles are intentionally synchronous
+# and can exceed the ordinary request window on a real server.
+Environment=YUNOHOST_MCP_REQUEST_TIMEOUT_SECONDS=1800
 # Optional migration backend: when YUNOHOST_MCP_IDENTITY_BACKEND is changed
 # to yunohost_groups, the MCP frontend and root broker query this separate
 # nostr_auth-owned socket. The default remains TOML until the lookup service
