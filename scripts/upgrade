@@ -53,6 +53,7 @@ ynh_config_add_systemd --service="$app-helper" --template="systemd-helper.servic
 ynh_config_add_systemd
 
 yunohost service add "$app" --description="YunoHost MCP server (Nostr-authenticated)"
+yunohost service add "$app-helper" --description="YunoHost MCP privileged operation broker"
 systemctl enable "$app-helper.service" --quiet
 systemctl restart "$app-helper.service"
 

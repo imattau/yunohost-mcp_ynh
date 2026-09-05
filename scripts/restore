@@ -31,6 +31,7 @@ systemctl enable "$app-helper.service" --quiet
 systemctl restart "$app-helper.service"
 
 yunohost service add "$app" --description="YunoHost MCP server (Nostr-authenticated)"
+yunohost service add "$app-helper" --description="YunoHost MCP privileged operation broker"
 
 #=================================================
 # RELOAD NGINX AND START THE APP
