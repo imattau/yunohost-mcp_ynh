@@ -14,6 +14,9 @@ Environment=PATH=__INSTALL_DIR__/venv/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Environment=YUNOHOST_MCP_CONFIG_DIR=__DATA_DIR__
 Environment=YUNOHOST_MCP_FAKE_YUNOHOST=false
 Environment=YUNOHOST_MCP_CONFIRMATION_STORE_FILE=__DATA_DIR__/confirmations.sqlite
+# The root broker independently resolves the caller through nostr_auth; it
+# must use the same private lookup socket as the unprivileged frontend.
+Environment=YUNOHOST_MCP_NOSTR_AUTH_LOOKUP_SOCKET=/run/nostr_auth-lookup/lookup.sock
 EnvironmentFile=-__DATA_DIR__/identity-backend.env
 ExecStart=__INSTALL_DIR__/venv/bin/yunohost-mcp-broker --socket-path=/run/yunohost_mcp/broker.sock --allowed-user=__APP__
 Restart=always
