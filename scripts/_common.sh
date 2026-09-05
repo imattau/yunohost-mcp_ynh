@@ -111,6 +111,20 @@ yunohost_mcp_set_identity_backend() {
 # policy configuration outside this migration's write set.
 yunohost_mcp_prepare_runtime_files() {
 	local f
+	# These are read by the frontend but remain administrator-owned.  The app
+	# group provides read access without allowing the network-facing process to
+	# rewrite authorization or policy configuration.
+	for f in "$data_dir/identity.toml" "$data_dir/policy.toml" "$data_dir/revoked_delegations.toml"; do
+		[ -e "$f" ] || continue
+		chown "root:$app" "$f"
+		chmod 640 "$f"
+	done
+	# The frontend lazily creates and refreshes this key, so it must own it;
+	# it is still private to the app user.
+	if [ -e "$data_dir/server_identity.key" ]; then
+		chown "$app:$app" "$data_dir/server_identity.key"
+		chmod 600 "$data_dir/server_identity.key"
+	fi
 	for f in "$data_dir/confirmations.sqlite" "$data_dir/audit.jsonl"; do
 		[ -e "$f" ] || continue
 		chown "$app:$app" "$f"
