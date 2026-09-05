@@ -7,7 +7,7 @@ name = "YunoHost MCP"
 description.en = "Nostr-authenticated MCP server for AI-assisted YunoHost administration and app-package development"
 description.fr = "Serveur MCP authentifié par Nostr pour l'administration de YunoHost et le développement de paquets assistés par IA"
 
-version = "0.8.4~ynh1"
+version = "0.8.5~ynh1"
 
 maintainers = []
 
@@ -51,8 +51,8 @@ ram.runtime = "80M"
 
 [resources]
     [resources.sources.main]
-    url = "https://github.com/imattau/yunohost-mcp/archive/refs/tags/v0.8.4.tar.gz"
-    sha256 = "14c4d18ad35d86ca7886aa1c95b1f196ccf92f4db43885b4cdc3ff97de42e976"
+    url = "https://github.com/imattau/yunohost-mcp/archive/refs/tags/v0.8.5.tar.gz"
+    sha256 = "2c434157b042f310a434b3d6468b9f6df8e911d136dadbf61a925bb800a8fa72"
     autoupdate.strategy = "latest_github_tag"
 
     [resources.system_user]
