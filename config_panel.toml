@@ -42,11 +42,52 @@ services = []
         help.en = "yunohost_groups resolves the Nostr identity through nostr_auth, then maps dedicated YunoHost MCP groups to MCP scopes."
         help.fr = "yunohost_groups résout l'identité Nostr via nostr_auth, puis associe les groupes YunoHost MCP dédiés aux scopes MCP."
 
+    [access.groups]
+    name.en = "YunoHost group access"
+    name.fr = "Accès par groupes YunoHost"
+    help.en = "In yunohost_groups mode, select a YunoHost user and MCP role below. Saving replaces that user's membership in the dedicated MCP role groups, so the selected role becomes effective for the Nostr identity linked to that account. These controls are inactive in TOML mode."
+    help.fr = "En mode yunohost_groups, sélectionnez ci-dessous un utilisateur YunoHost et un rôle MCP. L'enregistrement remplace l'appartenance de cet utilisateur aux groupes de rôles MCP dédiés ; le rôle sélectionné devient effectif pour l'identité Nostr liée à ce compte. Ces contrôles sont inactifs en mode TOML."
+
+        [access.groups.group_user]
+        ask.en = "YunoHost user"
+        ask.fr = "Utilisateur YunoHost"
+        type = "select"
+        optional = true
+        bind = "null"
+        choices = { placeholder = "(loading YunoHost users...)" }
+
+        [access.groups.group_role]
+        ask.en = "MCP role"
+        ask.fr = "Rôle MCP"
+        type = "select"
+        choices = ["readonly", "operator", "app-admin", "package-developer", "administrator"]
+        default = "readonly"
+        bind = "null"
+
+        [access.groups.do_group_assign]
+        ask.en = "Set user's MCP role"
+        ask.fr = "Définir le rôle MCP de l'utilisateur"
+        type = "button"
+        style = "success"
+
+        [access.groups.do_group_remove]
+        ask.en = "Remove user's MCP access"
+        ask.fr = "Supprimer l'accès MCP de l'utilisateur"
+        type = "button"
+        style = "danger"
+
+        [access.groups.group_assignments]
+        ask.en = "Current MCP group memberships"
+        ask.fr = "Appartenances actuelles aux groupes MCP"
+        type = "alert"
+        style = "info"
+        # Filled dynamically by get__group_assignments in scripts/config.
+
     [access.edit]
     name.en = "Edit an existing identity"
     name.fr = "Modifier une identité existante"
-    help.en = "Changes an existing identity.toml entry in place - no need to revoke and re-grant to change a role, name, or expiry. Effective immediately, no restart needed. Leave a field blank (or 'keep current' for role) to leave it unchanged; for expiry, type 'clear' to remove an existing expiry."
-    help.fr = "Modifie une entrée identity.toml existante sur place - inutile de révoquer puis ré-accorder pour changer un rôle, un nom ou une expiration. Effectif immédiatement, aucun redémarrage requis. Laissez un champ vide (ou « keep current » pour le rôle) pour le laisser inchangé ; pour l'expiration, tapez « clear » pour la supprimer."
+    help.en = "TOML mode only. Changes an existing identity.toml entry in place - no need to revoke and re-grant to change a role, name, or expiry. In yunohost_groups mode, use YunoHost group access above instead."
+    help.fr = "Mode TOML uniquement. Modifie une entrée identity.toml existante sur place - inutile de révoquer puis ré-accorder pour changer un rôle, un nom ou une expiration. En mode yunohost_groups, utilisez plutôt l'accès par groupes YunoHost ci-dessus."
 
         [access.edit.edit_npub]
         ask.en = "Agent to edit"
@@ -94,8 +135,8 @@ services = []
     [access.grant]
     name.en = "Grant a new identity"
     name.fr = "Accorder une nouvelle identité"
-    help.en = "Adds an entry to identity.toml. Effective immediately, no restart needed."
-    help.fr = "Ajoute une entrée à identity.toml. Effectif immédiatement, aucun redémarrage requis."
+    help.en = "TOML mode only. Adds an entry to identity.toml. In yunohost_groups mode, link the Nostr identity to a YunoHost user and assign that user's MCP role in YunoHost group access above."
+    help.fr = "Mode TOML uniquement. Ajoute une entrée à identity.toml. En mode yunohost_groups, liez l'identité Nostr à un utilisateur YunoHost et attribuez son rôle MCP dans l'accès par groupes ci-dessus."
 
         [access.grant.grant_npub]
         ask.en = "Agent's npub"
@@ -142,8 +183,8 @@ services = []
     [access.revoke]
     name.en = "Revoke an identity"
     name.fr = "Révoquer une identité"
-    help.en = "Removes an entry from identity.toml by npub. Effective immediately. Refuses to remove the last remaining administrator - use SSH (see doc/ADMIN.md) if that's genuinely what you need."
-    help.fr = "Supprime une entrée de identity.toml par npub. Effectif immédiatement. Refuse de supprimer le dernier administrateur restant - utilisez SSH (voir doc/ADMIN.md) si c'est réellement nécessaire."
+    help.en = "TOML mode only. Removes an entry from identity.toml by npub. In yunohost_groups mode, remove the user's MCP role from YunoHost group access above."
+    help.fr = "Mode TOML uniquement. Supprime une entrée de identity.toml par npub. En mode yunohost_groups, supprimez le rôle MCP de l'utilisateur dans l'accès par groupes YunoHost ci-dessus."
 
         [access.revoke.revoke_npub]
         ask.en = "Agent to revoke"

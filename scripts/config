@@ -268,7 +268,18 @@ _ymcp_fix_approve_file_perms() {
 #=================================================
 
 get__identities_summary() {
-	local summary
+	local summary backend
+	backend="$(get__identity_backend)"
+	if [ "$backend" = "yunohost_groups" ]; then
+		cat <<'EOF'
+ask:
+  en: |
+    Nostr identities are resolved by nostr_auth and authorised through YunoHost MCP role groups. See YunoHost group access below for the current assignments.
+  fr: |
+    Les identités Nostr sont résolues par nostr_auth et autorisées par les groupes de rôles MCP YunoHost. Consultez l'accès par groupes YunoHost ci-dessous pour voir les attributions actuelles.
+EOF
+		return
+	fi
 	summary="$(_ymcp_identity_tool summary "$data_dir/identity.toml")"
 	cat <<EOF
 ask:
@@ -287,6 +298,54 @@ get__edit_npub() {
 
 get__revoke_npub() {
 	_ymcp_identity_tool choices "$data_dir/identity.toml"
+}
+
+get__group_user() {
+	local users_json
+	users_json="$(yunohost user list --output-as-json 2>/dev/null)" || users_json=""
+	if [ -z "$users_json" ]; then
+		printf 'choices:\n  placeholder: "(could not load YunoHost users)"\n'
+		return
+	fi
+	printf '%s' "$users_json" | python3 -c '
+import json
+import sys
+
+try:
+    data = json.load(sys.stdin)
+except (ValueError, OSError):
+    print("choices:\n  placeholder: \"(could not load YunoHost users)\"")
+    raise SystemExit
+users = data.get("users", data)
+print("choices:")
+if not isinstance(users, dict) or not users:
+    print("  placeholder: \"(no YunoHost users found)\"")
+else:
+    for username, details in sorted(users.items()):
+        label = username
+        if isinstance(details, dict) and details.get("fullname"):
+            label = f"{details[\"fullname\"]} ({username})"
+        print(f"  {json.dumps(username)}: {json.dumps(label)}")
+'
+}
+
+get__group_assignments() {
+	local group members summary=""
+	for group in \
+		yunohost-mcp-readonly \
+		yunohost-mcp-operator \
+		yunohost-mcp-app-admin \
+		yunohost-mcp-package-developer \
+		yunohost-mcp-administrator; do
+		members="$(getent group "$group" | cut -d: -f4)"
+		[ -n "$members" ] || members="(none)"
+		summary="$summary\n- $group: $members"
+	done
+	cat <<EOF
+ask:
+  en: |
+$(printf '%b\n' "$summary" | sed 's/^/    /')
+EOF
 }
 
 get__pairing_status() {
@@ -349,6 +408,51 @@ EOF
 #=================================================
 # SETTERS
 #=================================================
+
+run__do_group_assign() {
+	[ "$(get__identity_backend)" = "yunohost_groups" ] || \
+		ynh_die "Switch the authorization backend to yunohost_groups before assigning group roles"
+	[ -n "${group_user:-}" ] || ynh_die "Select a YunoHost user"
+	[ -n "${group_role:-}" ] || ynh_die "Select an MCP role"
+	case "$group_role" in
+		readonly|operator|app-admin|package-developer|administrator) ;;
+		*) ynh_die "Unknown MCP role: $group_role" ;;
+	esac
+	yunohost user info "$group_user" >/dev/null 2>&1 || ynh_die "Unknown YunoHost user: $group_user"
+
+	local group selected_group="yunohost-mcp-$group_role"
+	for group in \
+		yunohost-mcp-readonly \
+		yunohost-mcp-operator \
+		yunohost-mcp-app-admin \
+		yunohost-mcp-package-developer \
+		yunohost-mcp-administrator; do
+		# Removing a user who is not a member is harmless but some YunoHost
+		# versions return non-zero; keep the operation idempotent.
+		yunohost user group update "$group" --remove "$group_user" >/dev/null 2>&1 || true
+	done
+	yunohost user group update "$selected_group" --add "$group_user" \
+		|| ynh_die "Could not assign $group_role to $group_user"
+	ynh_print_info "Assigned MCP role $group_role to YunoHost user $group_user"
+}
+
+run__do_group_remove() {
+	[ "$(get__identity_backend)" = "yunohost_groups" ] || \
+		ynh_die "Switch the authorization backend to yunohost_groups before removing group access"
+	[ -n "${group_user:-}" ] || ynh_die "Select a YunoHost user"
+	yunohost user info "$group_user" >/dev/null 2>&1 || ynh_die "Unknown YunoHost user: $group_user"
+
+	local group
+	for group in \
+		yunohost-mcp-readonly \
+		yunohost-mcp-operator \
+		yunohost-mcp-app-admin \
+		yunohost-mcp-package-developer \
+		yunohost-mcp-administrator; do
+		yunohost user group update "$group" --remove "$group_user" >/dev/null 2>&1 || true
+	done
+	ynh_print_info "Removed MCP group access from YunoHost user $group_user"
+}
 
 set__revoked_delegation_ids() {
 	_ymcp_identity_tool set-revoked "$data_dir/revoked_delegations.toml" "$revoked_delegation_ids"
