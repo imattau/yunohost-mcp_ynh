@@ -74,7 +74,7 @@ Generated on first run at `$data_dir/server_identity.key` (0600, root-owned) —
 
 ## A privilege note
 
-This service runs **as root**, not as an unprivileged `yunohost_mcp` system user. That's not an oversight: it imports YunoHost's own Python modules directly in-process, and the underlying operations (`systemctl`, `apt`, LDAP admin, writes under `/etc/yunohost/`) genuinely require root to function at all against a real YunoHost install. Splitting this into an unprivileged HTTP-facing process plus a narrow privileged helper is documented upstream as real, not-yet-built future work — not something this package already does. Every request is still authenticated, scope-checked, and audited before it reaches any YunoHost call; there is no way to reach this service's privileges without a validly-signed request from an identity `identity.toml` already grants that specific action to.
+The HTTP-facing service runs as the unprivileged app user. Root-only YunoHost operations cross a local Unix socket into a separate root helper, which accepts only explicitly registered operations and independently re-authenticates the original NIP-98 request. Every request is still authenticated, scope-checked, policy-checked and audited; the helper is not a shell or generic execution interface. Unsupported adapter operations fail closed until a typed broker operation is added.
 
 ## Logs
 

@@ -40,7 +40,7 @@ See [`doc/ADMIN.md`](doc/ADMIN.md) for granting further identities access, adjus
 ## Packaging notes
 
 - Python, not Node/Ruby/Go/Composer: there's no dedicated YunoHost resource for a Python virtualenv, so `scripts/_common.sh` creates one and `pip install`s the app into it directly from `pyproject.toml` on install/upgrade.
-- **Runs as root**, not the app's own system user — see [`doc/ADMIN.md`](doc/ADMIN.md#a-privilege-note) for why, and what that does and doesn't mean for its actual security posture.
+- **Uses a split privilege boundary**: the HTTP-facing MCP runs as the app user and delegates only registered operations to a local root broker — see [`doc/ADMIN.md`](doc/ADMIN.md#a-privilege-note).
 - No SSOwat/YunoHost-user auth on the app's own endpoint (`proxy_params_no_auth` in `conf/nginx.conf`) — this app authenticates its own callers via NIP-98, and SSOwat would otherwise intercept or rewrite the very `Authorization` header that scheme depends on.
 - Persistent state (`identity.toml`, `policy.toml`, `revoked_delegations.toml`, `audit.jsonl`, and the server's own generated Nostr keypair) all live under the app's YunoHost-managed data directory, independent of `install_dir`'s upgrade-time wipe-and-replace.
 

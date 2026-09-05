@@ -9,6 +9,10 @@ source /usr/share/yunohost/helpers
 ynh_script_progression "Stopping $app's systemd service..."
 
 ynh_systemctl --service="$app" --action="stop"
+# The helper shares the virtual environment with the frontend. Stop it before
+# replacing the source/venv so no root process can execute code from a mixed
+# old/new installation during the upgrade.
+systemctl stop "$app-helper.service" >/dev/null 2>&1 || true
 
 #=================================================
 # DOWNLOAD, CHECK AND UNPACK SOURCE
@@ -26,16 +30,29 @@ ynh_script_progression "Setting up the Python virtual environment..."
 
 yunohost_mcp_install_venv
 
+# Preserve the selected backend across upgrades; old installs default to the
+# compatibility backend until an administrator explicitly changes it.
+if [ ! -f "$data_dir/identity-backend.env" ]; then
+	yunohost_mcp_set_identity_backend "toml"
+fi
+
 #=================================================
 # REAPPLY SYSTEM CONFIGURATIONS
 #=================================================
 ynh_script_progression "Upgrading system configurations related to $app..."
 
+if getent group nostr-auth-lookup >/dev/null; then
+	usermod --append --groups nostr-auth-lookup "$app"
+fi
+
 ynh_config_add_nginx
 
+ynh_config_add_systemd --service="$app-helper" --template="systemd-helper.service"
 ynh_config_add_systemd
 
 yunohost service add "$app" --description="YunoHost MCP server (Nostr-authenticated)"
+systemctl enable "$app-helper.service" --quiet
+systemctl restart "$app-helper.service"
 
 #=================================================
 # START SYSTEMD SERVICE

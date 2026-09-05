@@ -28,17 +28,27 @@ ynh_script_progression "Setting up persistent data directory..."
 # it survives upgrades and reinstalls. See YUNOHOST_MCP_CONFIG_DIR in
 # conf/systemd.service.
 yunohost_mcp_seed_identity "$admin_npub"
+yunohost_mcp_set_identity_backend "toml"
 
 #=================================================
 # SYSTEM CONFIGURATION
 #=================================================
 ynh_script_progression "Adding system configurations related to $app..."
 
+# nostr_auth creates this dedicated group when installed. Do not create or
+# remove it here: package installation order must remain independent.
+if getent group nostr-auth-lookup >/dev/null; then
+	usermod --append --groups nostr-auth-lookup "$app"
+fi
+
 ynh_config_add_nginx
 
+ynh_config_add_systemd --service="$app-helper" --template="systemd-helper.service"
 ynh_config_add_systemd
 
 yunohost service add "$app" --description="YunoHost MCP server (Nostr-authenticated)"
+systemctl enable "$app-helper.service" --quiet
+systemctl start "$app-helper.service"
 
 #=================================================
 # START APP

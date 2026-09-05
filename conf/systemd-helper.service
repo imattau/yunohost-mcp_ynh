@@ -1,0 +1,33 @@
+[Unit]
+Description=YunoHost MCP privileged operation broker
+After=network.target
+Before=yunohost_mcp.service
+
+[Service]
+Type=simple
+User=root
+# Root retains the privilege boundary; the app group only makes the socket
+# traversable by the unprivileged frontend before SO_PEERCRED checks its uid.
+Group=__APP__
+WorkingDirectory=__INSTALL_DIR__/
+Environment=PATH=__INSTALL_DIR__/venv/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=YUNOHOST_MCP_CONFIG_DIR=__DATA_DIR__
+Environment=YUNOHOST_MCP_FAKE_YUNOHOST=false
+Environment=YUNOHOST_MCP_CONFIRMATION_STORE_FILE=__DATA_DIR__/confirmations.sqlite
+EnvironmentFile=-__DATA_DIR__/identity-backend.env
+ExecStart=__INSTALL_DIR__/venv/bin/yunohost-mcp-broker --socket-path=/run/yunohost_mcp/broker.sock --allowed-user=__APP__
+Restart=always
+RestartSec=5
+RuntimeDirectory=yunohost_mcp
+RuntimeDirectoryMode=0750
+PrivateTmp=yes
+NoNewPrivileges=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+SystemCallFilter=~@clock @debug @module @mount @obsolete @reboot @swap
+ReadWritePaths=__DATA_DIR__ /run/yunohost_mcp
+
+[Install]
+WantedBy=multi-user.target

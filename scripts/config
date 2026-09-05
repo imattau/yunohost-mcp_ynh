@@ -18,6 +18,27 @@ domain=$(ynh_app_setting_get --key=domain)
 path=$(ynh_app_setting_get --key=path)
 admin_npub=$(ynh_app_setting_get --key=admin_npub)
 
+get__identity_backend() {
+	if [ -f "$data_dir/identity-backend.env" ]; then
+		sed -n 's/^YUNOHOST_MCP_IDENTITY_BACKEND=//p' "$data_dir/identity-backend.env"
+	else
+		echo toml
+	fi
+}
+
+set__identity_backend() {
+	if [ "$identity_backend" = "yunohost_groups" ] && ! getent group nostr-auth-lookup >/dev/null; then
+		ynh_die "nostr-auth-lookup group is not available; install or upgrade nostr_auth before enabling group authorization"
+	fi
+	if [ "$identity_backend" = "yunohost_groups" ] && ! id -nG "$app" | tr ' ' '\n' | grep -qx nostr-auth-lookup; then
+		ynh_die "$app is not a member of nostr-auth-lookup; reinstall or upgrade both packages before enabling group authorization"
+	fi
+	yunohost_mcp_set_identity_backend "$identity_backend"
+	systemctl restart "$app-helper.service"
+	ynh_systemctl --service="$app" --action="restart" --log_path="systemd" --wait_until="Uvicorn running on"
+	ynh_print_info "Identity backend changed to $identity_backend"
+}
+
 #=================================================
 # SHARED PYTHON HELPER
 #=================================================

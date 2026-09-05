@@ -90,6 +90,20 @@ EOF
 	chmod 640 "$data_dir/identity.toml"
 }
 
+# The backend is shared by the unprivileged frontend and root broker through
+# an EnvironmentFile, so a config-panel change cannot leave them using
+# different authorization sources.
+yunohost_mcp_set_identity_backend() {
+	local backend="${1:-toml}"
+	case "$backend" in
+		toml|yunohost_groups) ;;
+		*) ynh_die "Unknown identity backend: $backend" ;;
+	esac
+	printf 'YUNOHOST_MCP_IDENTITY_BACKEND=%s\n' "$backend" > "$data_dir/identity-backend.env"
+	chown "$app:$app" "$data_dir/identity-backend.env"
+	chmod 640 "$data_dir/identity-backend.env"
+}
+
 # Print the MCP endpoint URL and this server's own Nostr identity (npub) at
 # the end of install/upgrade/restore/change_url - without this, there is no
 # other way to learn either value short of SSHing in and reading files, and

@@ -27,6 +27,21 @@ services = []
         style = "info"
         # Filled dynamically by get__identities_summary in scripts/config.
 
+    [access.backend]
+    name.en = "Authorization backend"
+    name.fr = "Backend d'autorisation"
+    help.en = "TOML is the compatibility default. Group-backed authorization requires the nostr_auth lookup service and the MCP service user to be in the nostr-auth-lookup group. Changing this restarts the MCP frontend and broker."
+    help.fr = "TOML est la valeur par défaut de compatibilité. L'autorisation par groupes nécessite le service de recherche nostr_auth et que l'utilisateur MCP appartienne au groupe nostr-auth-lookup. Cette modification redémarre le frontend MCP et le broker."
+
+        [access.backend.identity_backend]
+        ask.en = "Identity authorization source"
+        ask.fr = "Source d'autorisation des identités"
+        type = "select"
+        choices = ["toml", "yunohost_groups"]
+        bind = "null"
+        help.en = "yunohost_groups resolves the Nostr identity through nostr_auth, then maps dedicated YunoHost MCP groups to MCP scopes."
+        help.fr = "yunohost_groups résout l'identité Nostr via nostr_auth, puis associe les groupes YunoHost MCP dédiés aux scopes MCP."
+
     [access.edit]
     name.en = "Edit an existing identity"
     name.fr = "Modifier une identité existante"

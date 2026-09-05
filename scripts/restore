@@ -26,6 +26,9 @@ ynh_restore "/etc/nginx/conf.d/$domain.d/$app.conf"
 
 ynh_restore "/etc/systemd/system/$app.service"
 systemctl enable "$app.service" --quiet
+ynh_restore "/etc/systemd/system/$app-helper.service"
+systemctl enable "$app-helper.service" --quiet
+systemctl restart "$app-helper.service"
 
 yunohost service add "$app" --description="YunoHost MCP server (Nostr-authenticated)"
 
