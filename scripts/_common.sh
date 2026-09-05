@@ -138,6 +138,23 @@ yunohost_mcp_prepare_runtime_files() {
 	done
 }
 
+# These groups are the YunoHost-side representation of MCP roles.  Keep them
+# empty on creation: linking an identity and granting it a role are separate
+# administrator decisions.
+yunohost_mcp_ensure_scope_groups() {
+	local group
+	for group in \
+		yunohost-mcp-readonly \
+		yunohost-mcp-operator \
+		yunohost-mcp-app-admin \
+		yunohost-mcp-package-developer \
+		yunohost-mcp-administrator; do
+		if ! yunohost user group info "$group" >/dev/null 2>&1; then
+			yunohost user group create "$group"
+		fi
+	done
+}
+
 # Print the MCP endpoint URL and this server's own Nostr identity (npub) at
 # the end of install/upgrade/restore/change_url - without this, there is no
 # other way to learn either value short of SSHing in and reading files, and

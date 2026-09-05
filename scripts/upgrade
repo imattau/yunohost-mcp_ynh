@@ -36,6 +36,7 @@ if [ ! -f "$data_dir/identity-backend.env" ]; then
 	yunohost_mcp_set_identity_backend "toml"
 fi
 yunohost_mcp_prepare_runtime_files
+yunohost_mcp_ensure_scope_groups
 
 #=================================================
 # REAPPLY SYSTEM CONFIGURATIONS
