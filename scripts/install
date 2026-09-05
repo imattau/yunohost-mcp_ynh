@@ -29,6 +29,7 @@ ynh_script_progression "Setting up persistent data directory..."
 # conf/systemd.service.
 yunohost_mcp_seed_identity "$admin_npub"
 yunohost_mcp_set_identity_backend "toml"
+yunohost_mcp_prepare_runtime_files
 
 #=================================================
 # SYSTEM CONFIGURATION

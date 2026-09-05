@@ -104,6 +104,26 @@ yunohost_mcp_set_identity_backend() {
 	chmod 640 "$data_dir/identity-backend.env"
 }
 
+# The frontend is intentionally unprivileged.  Older releases ran it as root,
+# so their runtime SQLite/audit files may still be root-owned; chmod() on an
+# existing root-owned file fails after the privilege-boundary migration.
+# Repair only files the frontend is expected to write, keeping identity and
+# policy configuration outside this migration's write set.
+yunohost_mcp_prepare_runtime_files() {
+	local f
+	for f in "$data_dir/confirmations.sqlite" "$data_dir/audit.jsonl"; do
+		[ -e "$f" ] || continue
+		chown "$app:$app" "$f"
+		chmod 660 "$f"
+	done
+	# SQLite may leave these sidecars behind after an interrupted shutdown.
+	for f in "$data_dir/confirmations.sqlite-wal" "$data_dir/confirmations.sqlite-shm"; do
+		[ -e "$f" ] || continue
+		chown "$app:$app" "$f"
+		chmod 660 "$f"
+	done
+}
+
 # Print the MCP endpoint URL and this server's own Nostr identity (npub) at
 # the end of install/upgrade/restore/change_url - without this, there is no
 # other way to learn either value short of SSHing in and reading files, and
