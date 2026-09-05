@@ -22,9 +22,18 @@ EnvironmentFile=-__DATA_DIR__/identity-backend.env
 ExecStart=__INSTALL_DIR__/venv/bin/yunohost-mcp-broker --socket-path=/run/yunohost_mcp/broker.sock --allowed-user=__APP__
 Restart=always
 RestartSec=5
+# 0755, not something narrower: systemd's RuntimeDirectory= is (re)created
+# on every start owned by this unit's own User=/Group= (root:root, per the
+# comment above) - an ExecStartPre chown to __APP__'s group does NOT stick,
+# confirmed live: it reports success but the directory's group is still
+# root afterwards, silently blocking the frontend (group __APP__, not
+# root) from even traversing into /run/yunohost_mcp to reach the socket,
+# regardless of the socket file's own correct permissions. Real access
+# control is the socket file's own 0660 root:__APP__ ownership (broker's
+# main(), which explicitly os.chown()s it after binding) - same reasoning
+# already applied to nostr_auth-identity-lookup.service's identical fix.
 RuntimeDirectory=yunohost_mcp
-RuntimeDirectoryMode=0750
-ExecStartPre=/usr/bin/install -d -o root -g __APP__ -m 0750 /run/yunohost_mcp
+RuntimeDirectoryMode=0755
 PrivateTmp=yes
 NoNewPrivileges=yes
 RestrictNamespaces=yes
