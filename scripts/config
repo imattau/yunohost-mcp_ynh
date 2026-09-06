@@ -26,6 +26,26 @@ get__identity_backend() {
 	fi
 }
 
+get__polypack_status() {
+	local port env_file configured_url
+	env_file="$(yunohost_mcp_polypack_env_file)"
+	port="$(yunohost_mcp_polypack_port || true)"
+	configured_url="$(sed -n 's/^YUNOHOST_MCP_POLYPACK_URL=//p' "$env_file" 2>/dev/null || true)"
+	if [ -n "$port" ]; then
+		cat <<EOF
+ask:
+  en: "Detected Polypack MCP endpoint: http://127.0.0.1:$port/mcp/ (configured: ${configured_url:-not yet})"
+  fr: "Point de terminaison MCP Polypack détecté : http://127.0.0.1:$port/mcp/ (configuré : ${configured_url:-pas encore})"
+EOF
+	else
+		cat <<'EOF'
+ask:
+  en: "Polypack MCP is not installed/configured. The integration is optional."
+  fr: "Polypack MCP n'est pas installé/configuré. L'intégration est facultative."
+EOF
+	fi
+}
+
 set__identity_backend() {
 	if [ "$identity_backend" = "yunohost_groups" ] && ! getent group nostr-auth-lookup >/dev/null; then
 		ynh_die "nostr-auth-lookup group is not available; install or upgrade nostr_auth before enabling group authorization"
@@ -522,6 +542,14 @@ run__do_resync_relays() {
 		|| ynh_die "Could not refresh the relay list - see the output above"
 	_ymcp_fix_approve_file_perms
 	ynh_print_info "Done - reload this panel (or scroll up) to see the refreshed code in Signer status."
+}
+
+run__do_refresh_polypack() {
+	yunohost_mcp_set_polypack_endpoint
+	# The EnvironmentFile is read only when the service starts. This action is
+	# explicit so simply opening the config panel never restarts MCP.
+	ynh_systemctl --service="$app" --action="restart" --log_path="systemd" --wait_until="Uvicorn running on"
+	ynh_print_info "YunoHost MCP restarted with the refreshed Polypack endpoint."
 }
 
 run__do_pair() {

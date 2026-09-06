@@ -3,6 +3,45 @@
 # PACKAGE-SPECIFIC HELPERS
 #=================================================
 
+# The Polypack package owns its YunoHost-allocated port. Keep the discovered
+# endpoint in a separate EnvironmentFile so the optional integration can be
+# refreshed without baking another app's port into this package's systemd
+# template. An absent/unreadable Polypack app deliberately produces an empty
+# file, which leaves the upstream setting at its safe "not configured" value.
+yunohost_mcp_polypack_env_file() {
+	echo "$data_dir/polypack.env"
+}
+
+yunohost_mcp_polypack_port() {
+	local configured_port numeric_port
+	configured_port="$(ynh_app_setting_get --app=polypack_mcp --key=port 2>/dev/null || true)"
+	case "$configured_port" in
+		''|*[!0-9]*) return 1 ;;
+	esac
+	numeric_port=$((10#$configured_port))
+	if [ "$numeric_port" -lt 1 ] || [ "$numeric_port" -gt 65535 ]; then
+		return 1
+	fi
+	printf '%s' "$numeric_port"
+}
+
+yunohost_mcp_set_polypack_endpoint() {
+	local env_file port
+	env_file="$(yunohost_mcp_polypack_env_file)"
+	port="$(yunohost_mcp_polypack_port || true)"
+
+	if [ -n "$port" ]; then
+		printf 'YUNOHOST_MCP_POLYPACK_URL=http://127.0.0.1:%s/mcp/\n' "$port" > "$env_file"
+		ynh_print_info "Polypack integration enabled at http://127.0.0.1:$port/mcp/"
+	else
+		printf '# Polypack MCP is optional and is not currently installed/configured.\n' > "$env_file"
+		ynh_print_info "Polypack integration is not configured (optional app not detected)."
+	fi
+
+	chown "root:$app" "$env_file"
+	chmod 640 "$env_file"
+}
+
 # Where the owner's NIP-46 pairing session (yunohost-mcp-approve's own
 # app-channel keypair + reconnectable bunker:// URI - never the owner's
 # real key) is persisted, shared between the optional install-time pairing

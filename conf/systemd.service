@@ -35,6 +35,10 @@ Environment=YUNOHOST_MCP_NOSTR_AUTH_LOOKUP_SOCKET=/run/nostr_auth-lookup/lookup.
 # never decides who's authorized.
 Environment=YUNOHOST_MCP_NOSTR_AUTH_RELAY_LOOKUP_SOCKET=/run/nostr_auth-relay-lookup/relays.sock
 EnvironmentFile=-__DATA_DIR__/identity-backend.env
+# Optional Polypack integration. The package refreshes this file from
+# Polypack's YunoHost-allocated port during install, upgrade, restore, or an
+# explicit config-panel refresh. It is intentionally loopback-only.
+EnvironmentFile=-__DATA_DIR__/polypack.env
 # Owner co-signing (v0.5.0+, upstream owner-approval-plan.md's `solo`
 # profile): pinned explicitly to the install-time admin_npub, rather than
 # left to fall back on "whichever single identity.toml entry holds the

@@ -11,6 +11,32 @@
 
 version = "1.0"
 
+[integration]
+name.en = "Local integrations"
+name.fr = "Intégrations locales"
+services = []
+
+    [integration.polypack]
+    name.en = "Polypack memory"
+    name.fr = "Mémoire Polypack"
+    help.en = "Optional integration with the separately installed Polypack MCP app. The endpoint remains loopback-only and is never exposed through Nginx."
+    help.fr = "Intégration facultative avec l'application MCP Polypack installée séparément. Le point de terminaison reste limité à la boucle locale et n'est jamais exposé par Nginx."
+
+        [integration.polypack.status]
+        ask.en = "Current endpoint"
+        ask.fr = "Point de terminaison actuel"
+        type = "alert"
+        style = "info"
+        # Filled dynamically by get__polypack_status in scripts/config.
+
+        [integration.polypack.do_refresh_polypack]
+        ask.en = "Refresh Polypack endpoint"
+        ask.fr = "Actualiser le point de terminaison Polypack"
+        type = "button"
+        style = "info"
+        help.en = "Re-read Polypack's YunoHost-allocated port, persist the loopback MCP URL, and restart YunoHost MCP."
+        help.fr = "Relit le port alloué par YunoHost à Polypack, enregistre l'URL MCP locale et redémarre YunoHost MCP."
+
 [access]
 name.en = "Agent access"
 name.fr = "Accès des agents"

@@ -76,6 +76,20 @@ Generated on first run at `$data_dir/server_identity.key` (0600, root-owned) —
 
 The HTTP-facing service runs as the unprivileged app user. Root-only YunoHost operations cross a local Unix socket into a separate root helper, which accepts only explicitly registered operations and independently re-authenticates the original NIP-98 request. Every request is still authenticated, scope-checked, policy-checked and audited; the helper is not a shell or generic execution interface. Unsupported adapter operations fail closed until a typed broker operation is added.
 
+## Optional Polypack memory integration
+
+When the separate `polypack_mcp` YunoHost app is installed, YunoHost MCP can
+discover its allocated loopback port and configure the authenticated
+`memory_*` façade automatically. The handoff is stored in
+`$data_dir/polypack.env`; it is refreshed during install, upgrade, and
+restore, or manually from the config panel's **Local integrations → Refresh
+Polypack endpoint** action.
+
+Polypack remains loopback-only and is not added to Nginx. If it is absent, the
+integration stays disabled and the normal YunoHost MCP tools are unaffected.
+The upstream release must include the Polypack façade tools before agents can
+use the integration.
+
 ## Logs
 
 ```
