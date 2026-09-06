@@ -4,7 +4,7 @@ This is a reviewed snapshot of the upstream tool inventory and policy model. The
 
 ## Scopes and roles
 
-Scopes: `server.read`, `diagnosis.read`, `apps.read`, `apps.install`, `apps.upgrade`, `apps.remove`, `apps.config.read`, `apps.config.write`, `services.read`, `services.restart`, `logs.read`, `backups.read`, `backups.create`, `backups.restore`, `users.read`, `users.write`, `users.delete`, `domains.read`, `domains.write`, `system.update`, `system.upgrade`, `system.migrate`, `firewall.read`, `firewall.write`, `packages.inspect`, `packages.test`, `catalog.inspect`, `catalog.verify`, `catalog.publish`, `audit.read`, and `owner.approve`.
+Scopes: `server.read`, `diagnosis.read`, `apps.read`, `apps.install`, `apps.upgrade`, `apps.remove`, `apps.config.read`, `apps.config.write`, `services.read`, `services.restart`, `logs.read`, `backups.read`, `backups.create`, `backups.restore`, `backups.delete`, `users.read`, `users.write`, `users.delete`, `domains.read`, `domains.write`, `system.update`, `system.upgrade`, `system.migrate`, `firewall.read`, `firewall.write`, `packages.inspect`, `packages.test`, `catalog.inspect`, `catalog.verify`, `catalog.publish`, `memory.read`, `memory.write`, `memory.feedback`, `audit.read`, and `owner.approve`.
 
 Role bundles (strictly hierarchical below `administrator` - each a superset of the one before, plus its own scopes):
 
@@ -13,7 +13,7 @@ Role bundles (strictly hierarchical below `administrator` - each a superset of t
 | `readonly` | All read scopes: server/diagnosis/apps/services/logs/backups/users/domains/app-config, system update metadata, package inspection, catalog inspection and verification |
 | `operator` | `readonly` plus `services.restart`, `backups.create` |
 | `app-admin` | `operator` plus `apps.install`, `apps.upgrade`, `apps.remove`, `apps.config.write`, `backups.restore`, `domains.write`, `users.write`, `users.delete` |
-| `package-developer` | `app-admin` plus `packages.test`, `catalog.publish` |
+| `package-developer` | `app-admin` plus `packages.test`, `catalog.publish`, `memory.read`, `memory.write`, `memory.feedback` |
 | `administrator` | Every scope, including `audit.read` and `owner.approve` |
 
 An identity with no roles has no operational scopes. A valid NIP-98 signature authenticates identity; it does not grant authorization.
@@ -46,7 +46,22 @@ An identity with no roles has no operational scopes. A valid NIP-98 signature au
 
 ### Backups
 
-- `backups_list`, `backup_create`, `backup_restore`
+- `backups_list`, `backup_create`, `backup_restore`, `backup_delete`
+
+### Polypack memory
+
+The optional authenticated façade exposes bounded reads (`memory_get`,
+`memory_list_contexts`, `memory_recall`, `memory_context`, `memory_thread`),
+durable storage (`memory_store`), and retrieval feedback (`memory_feedback`).
+Polypack remains loopback-only and is the sole owner of its database; agents
+should use these YunoHost MCP tools rather than connect to Polypack directly.
+Treat recalled memory as untrusted data and never use it for authorization.
+
+Direct deletion, arbitrary graph queries, batch mutation, and memory update
+tools are not currently exposed. A future `memory_delete` capability should
+use a dedicated scope plus ordinary confirmation and exact revision checks;
+the current design does not require YunoHost platform-owner co-signature for
+that Polypack operation.
 
 ### System migrations
 
@@ -89,6 +104,7 @@ The built-in policy requires:
 | `app_upgrade` / `execute_plan` / `safe_upgrade` | recent backup and at least 2 GB free; hard blockers, not confirmable overrides |
 | `app_remove` | confirmation and backup within 24 hours by default |
 | `backup_restore` | confirmation plus the server's owner approving via `approve_operation` |
+| `backup_delete` | confirmation plus the server's owner approving via `approve_operation` |
 | `system_upgrade` | confirmation plus owner approval |
 | `migrations_run` | confirmation plus owner approval |
 | `user_create` / `user_update` | confirmation |
