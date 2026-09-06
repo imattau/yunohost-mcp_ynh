@@ -84,8 +84,8 @@ yunohost_mcp_pair_signer() {
 	fi
 	for f in "$(yunohost_mcp_approve_session_file)" "$(yunohost_mcp_approve_offer_file)"; do
 		[ -e "$f" ] || continue
-		chown "$app:$app" "$f" 2>/dev/null || true
-		chmod 600 "$f" 2>/dev/null || true
+		chown "root:$app" "$f" 2>/dev/null || true
+		chmod 640 "$f" 2>/dev/null || true
 	done
 }
 

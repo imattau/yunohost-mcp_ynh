@@ -44,7 +44,7 @@ The **owner** who approves is fixed at install time to the npub you gave the ins
 
 **If a signer is paired** (see above), you usually don't need to do anything at all: the moment such an operation is requested, the server itself opens a live connection to your paired signer and asks it to sign a small, human-readable approval covering exactly that request — a real push prompt on your signer app, no command to run or button to click. Approving there is enough; the sections below (manual `approve_operation` via the webadmin or CLI) are the fallback for when no signer is paired yet, the push is declined or times out, or you're checking on something asynchronously. Disable the automatic push entirely with `YUNOHOST_MCP_OWNER_PUSH_APPROVAL_ENABLED=false` in `conf/systemd.service` if you'd rather always approve manually.
 
-**Webadmin (no SSH needed):** Apps → YunoHost MCP → Config panel → *Owner approval*. This is offered as an optional, recommended step at install time too (have your signer app open and ready before continuing installation — it waits briefly for pairing, but never fails the install if you skip it or it times out):
+**Webadmin (no SSH needed):** Apps → YunoHost MCP → Config panel → *Owner approval*. This is offered as an optional, recommended step at install time too (have your signer app open and ready before continuing installation — it waits briefly for pairing, but never fails the install if you skip it or it times out). Pairing is bound to the install-time `admin_npub`; a different bunker signer is rejected and cannot become an approval authority:
 
 - *Signer status* shows whether a NIP-46 signer is paired yet - and, if not, the `nostrconnect://` link and QR code to scan, generated as soon as the panel loads (no button click needed) and stable across reloads until it's used or expires. It automatically looks up your own published relay list (NIP-65) from your npub and prefers those relays, falling back to a small set of sane defaults if you haven't published one.
 - *Pair or re-pair your signer* completes pairing against the code already shown above, once you've scanned it. Safe to re-run any time, e.g. after switching signer apps or if it times out (the same code stays valid - just try again). Listing *Additional relays* here and clicking generates a fresh code that includes them. If your signer app can export a `bunker://` connection string itself (a separate feature from scanning a code - check for an "add a connection" option), paste it into *Or paste a bunker:// URI* instead and pairing completes immediately, no code involved.
@@ -53,7 +53,7 @@ The **owner** who approves is fixed at install time to the npub you gave the ins
 **SSH, using the CLI directly:** the owner runs the upstream [`yunohost-mcp-approve`](https://github.com/imattau/yunohost-mcp#approving-high-risk-operations-yunohost-mcp-approve) tool from their own machine, on whatever device holds their [NIP-46](https://nips.nostr.com/46) remote signer app (Amber, nsec.app, ...) — the owner's private key never touches this server, nor the requesting agent's machine:
 
 ```
-yunohost-mcp-approve pair                 # one-time
+yunohost-mcp-approve pair --owner-npub <owner-npub> # one-time
 yunohost-mcp-approve status               # check pairing state without a live round trip
 yunohost-mcp-approve approve --server https://your-domain/mcp --confirmation-id confirm-...
 ```

@@ -271,14 +271,15 @@ _ymcp_approve_bin() {
 		"$@"
 }
 
-# The offer/session files are created root-owned (every config script here
-# runs as root) - match identity.toml's app:app ownership so they behave
-# consistently under backup/restore and aren't just a root-only artifact.
+# The offer/session files are created by root-run package/config scripts, but
+# the MCP service needs read access to the paired session. Keep them
+# administrator-owned and group-readable, never writable by the network-
+# facing service account.
 _ymcp_fix_approve_file_perms() {
 	for f in "$(yunohost_mcp_approve_session_file)" "$(yunohost_mcp_approve_offer_file)"; do
 		[ -e "$f" ] || continue
-		chown "$app:$app" "$f"
-		chmod 600 "$f"
+		chown "root:$app" "$f"
+		chmod 640 "$f"
 	done
 }
 
@@ -563,7 +564,7 @@ run__do_pair() {
 		# exported connection string already fully describes how to reach
 		# it, so this connects immediately rather than waiting on anything.
 		ynh_print_info "Connecting to the pasted bunker:// signer..."
-		_ymcp_approve_bin pair --repair --bunker-uri "$pair_bunker_uri" \
+		_ymcp_approve_bin pair --repair --owner-npub "$admin_npub" --bunker-uri "$pair_bunker_uri" \
 			|| ynh_die "Could not pair with that bunker:// URI - see the output above (check it's current and try again)"
 		_ymcp_fix_approve_file_perms
 		ynh_print_info "Signer paired - owner-gated operations can now be approved below."
