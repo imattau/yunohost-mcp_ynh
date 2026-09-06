@@ -164,13 +164,22 @@ yunohost_mcp_prepare_runtime_files() {
 		chown "$app:$app" "$data_dir/server_identity.key"
 		chmod 600 "$data_dir/server_identity.key"
 	fi
-	for f in "$data_dir/confirmations.sqlite" "$data_dir/audit.jsonl"; do
+	for f in "$data_dir/confirmations.sqlite" "$data_dir/audit.jsonl" "$data_dir/package-test-sessions.sqlite"; do
 		[ -e "$f" ] || continue
 		chown "$app:$app" "$f"
 		chmod 660 "$f"
 	done
 	# SQLite may leave these sidecars behind after an interrupted shutdown.
-	for f in "$data_dir/confirmations.sqlite-wal" "$data_dir/confirmations.sqlite-shm"; do
+	# package-test-sessions.sqlite is created independently by both the root
+	# broker and the unprivileged frontend on first startup after it was
+	# introduced (0.8.40) - whichever process wins that race owns the file,
+	# and the broker starts first (Before=yunohost_mcp.service), so it's
+	# reliably created root:root, which then makes the frontend crash with
+	# "unable to open database file" on every subsequent restart. Confirmed
+	# live 2026-09-07. Same self-healing treatment as confirmations.sqlite
+	# above: this repairs it on the very next upgrade.
+	for f in "$data_dir/confirmations.sqlite-wal" "$data_dir/confirmations.sqlite-shm" \
+		"$data_dir/package-test-sessions.sqlite-wal" "$data_dir/package-test-sessions.sqlite-shm"; do
 		[ -e "$f" ] || continue
 		chown "$app:$app" "$f"
 		chmod 660 "$f"
