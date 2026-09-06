@@ -24,6 +24,16 @@ Environment=YUNOHOST_MCP_REQUEST_TIMEOUT_SECONDS=1800
 # nostr_auth-owned socket. The default remains TOML until the lookup service
 # and group membership have been verified on this host.
 Environment=YUNOHOST_MCP_NOSTR_AUTH_LOOKUP_SOCKET=/run/nostr_auth-lookup/lookup.sock
+# _catalog_relays()'s optional fourth fallback: widen a catalog search
+# with the *calling* identity's own NIP-65 relays, via nostr_auth's
+# separate relay-lookup socket (its own RuntimeDirectory, not shared with
+# the identity-lookup socket above - see nostr_auth_ynh's
+# nostr_auth-relay-lookup.service). Best-effort and silently a no-op if
+# nostr_auth's relay-lookup service isn't installed or the caller isn't
+# linked - unlike YUNOHOST_MCP_NOSTR_AUTH_LOOKUP_SOCKET above, this has no
+# identity-backend gate: it only ever widens an already-authorized call,
+# never decides who's authorized.
+Environment=YUNOHOST_MCP_NOSTR_AUTH_RELAY_LOOKUP_SOCKET=/run/nostr_auth-relay-lookup/relays.sock
 EnvironmentFile=-__DATA_DIR__/identity-backend.env
 # Owner co-signing (v0.5.0+, upstream owner-approval-plan.md's `solo`
 # profile): pinned explicitly to the install-time admin_npub, rather than

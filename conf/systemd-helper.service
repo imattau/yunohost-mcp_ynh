@@ -18,6 +18,10 @@ Environment=YUNOHOST_MCP_CONFIRMATION_STORE_FILE=__DATA_DIR__/confirmations.sqli
 # The root broker independently resolves the caller through nostr_auth; it
 # must use the same private lookup socket as the unprivileged frontend.
 Environment=YUNOHOST_MCP_NOSTR_AUTH_LOOKUP_SOCKET=/run/nostr_auth-lookup/lookup.sock
+# catalog_list()/catalog_publish() etc. always run here (the broker), not
+# the frontend, whenever one is configured - same reasoning and same
+# separate socket as conf/systemd.service's identical line.
+Environment=YUNOHOST_MCP_NOSTR_AUTH_RELAY_LOOKUP_SOCKET=/run/nostr_auth-relay-lookup/relays.sock
 EnvironmentFile=-__DATA_DIR__/identity-backend.env
 ExecStart=__INSTALL_DIR__/venv/bin/yunohost-mcp-broker --socket-path=/run/yunohost_mcp/broker.sock --allowed-user=__APP__
 Restart=always
