@@ -555,16 +555,19 @@ get__armada_env() {
 	cat "$data_dir/armada.env"
 }
 
+# YunoHost's boolean config-panel type reads/writes "0"/"1", not
+# "true"/"false" (the .env file's own format, for
+# yunohost_mcp.config.Settings' bool parsing) - convert on the way out.
 get__armada_enabled() {
 	local v
 	v="$(get__armada_env | sed -n 's/^YUNOHOST_MCP_ARMADA_ENABLED=//p')"
-	echo "${v:-false}"
+	[ "${v:-false}" = "true" ] && echo 1 || echo 0
 }
 
 get__armada_auto_announce() {
 	local v
 	v="$(get__armada_env | sed -n 's/^YUNOHOST_MCP_ARMADA_AUTO_ANNOUNCE=//p')"
-	echo "${v:-false}"
+	[ "${v:-false}" = "true" ] && echo 1 || echo 0
 }
 
 get__armada_relays() {
@@ -614,8 +617,8 @@ EOF
 
 get__armada_status() {
 	local enabled auto_announce key_status invite_status
-	enabled="$(get__armada_enabled)"
-	auto_announce="$(get__armada_auto_announce)"
+	[ "$(get__armada_enabled)" = "1" ] && enabled="yes" || enabled="no"
+	[ "$(get__armada_auto_announce)" = "1" ] && auto_announce="yes" || auto_announce="no"
 	key_status="$(_ymcp_armada_tool key-status "$data_dir/armada-bot.key" 2>/dev/null || echo absent)"
 	invite_status="$(_ymcp_armada_tool invite-status "$data_dir/armada-community.invite")"
 	cat <<EOF
@@ -636,13 +639,13 @@ EOF
 set__armada_enabled() {
 	yunohost_mcp_set_armada_settings "$armada_enabled" "$(get__armada_auto_announce)" "$(get__armada_relays)"
 	ynh_systemctl --service="$app" --action="restart" --log_path="systemd" --wait_until="Uvicorn running on"
-	ynh_print_info "Armada integration ${armada_enabled}"
+	[ "$armada_enabled" = "1" ] && ynh_print_info "Armada integration enabled" || ynh_print_info "Armada integration disabled"
 }
 
 set__armada_auto_announce() {
 	yunohost_mcp_set_armada_settings "$(get__armada_enabled)" "$armada_auto_announce" "$(get__armada_relays)"
 	ynh_systemctl --service="$app" --action="restart" --log_path="systemd" --wait_until="Uvicorn running on"
-	ynh_print_info "Armada auto-announce set to $armada_auto_announce"
+	[ "$armada_auto_announce" = "1" ] && ynh_print_info "Armada auto-announce enabled" || ynh_print_info "Armada auto-announce disabled"
 }
 
 set__armada_relays() {

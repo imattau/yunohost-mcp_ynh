@@ -150,10 +150,25 @@ yunohost_mcp_set_identity_backend() {
 # $data_dir (never admin-editable): conf/systemd.service already sandboxes
 # the service to ReadWritePaths=__DATA_DIR__, so anywhere else could never
 # actually be written by it.
+#  YunoHost's config-panel boolean type passes its setter "0"/"1"
+# (confirmed from a live app_config_set failure log - the getter side
+# conventionally returns the same), never the literal strings
+# "true"/"false" - normalize here rather than at every call site, since
+# the .env file itself needs "true"/"false" for
+# yunohost_mcp.config.Settings' own bool parsing.
+_ymcp_normalize_bool() {
+	case "$1" in
+		1|true|True|TRUE) echo true ;;
+		0|false|False|FALSE|"") echo false ;;
+		*) ynh_die "expected a boolean (0/1 or true/false), got: $1" ;;
+	esac
+}
+
 yunohost_mcp_set_armada_settings() {
-	local enabled="${1:-false}" auto_announce="${2:-false}" relays="${3:-}"
-	case "$enabled" in true|false) ;; *) ynh_die "armada_enabled must be true or false" ;; esac
-	case "$auto_announce" in true|false) ;; *) ynh_die "armada_auto_announce must be true or false" ;; esac
+	local enabled auto_announce relays
+	enabled="$(_ymcp_normalize_bool "${1:-0}")"
+	auto_announce="$(_ymcp_normalize_bool "${2:-0}")"
+	relays="${3:-}"
 	cat > "$data_dir/armada.env" <<EOF
 YUNOHOST_MCP_ARMADA_ENABLED=$enabled
 YUNOHOST_MCP_ARMADA_AUTO_ANNOUNCE=$auto_announce
