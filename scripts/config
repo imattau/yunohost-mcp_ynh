@@ -431,6 +431,30 @@ else:
 PYEOF
 }
 
+# Runs _ymcp_armada_tool, capturing its stdout into _YMCP_OUT and returning
+# its exit status - and on failure, records the real cause to
+# armada-last-error.log itself, in bash, rather than relying solely on the
+# python dispatcher's own _record_error. That python-side recording can
+# only ever run once `sudo -u "$app"` actually starts python - a sudo,
+# PATH, or permission failure before that point (confirmed live: an
+# action failed with the panel showing "no logs" at all, meaning even the
+# python-side mechanism produced nothing) leaves nothing for it to catch.
+# This is the backstop for exactly that case.
+_ymcp_armada_tool_capture() {
+	local errfile
+	errfile="$(mktemp)"
+	_YMCP_OUT="$(_ymcp_armada_tool "$@" 2>"$errfile")"
+	local status=$?
+	if [ "$status" -ne 0 ]; then
+		local err
+		err="$(cat "$errfile")"
+		printf '%s [%s] %s\n' "$(date -Iseconds)" "$1" "${err:-command failed with no output (exit $status)}" \
+			> "$data_dir/armada-last-error.log"
+	fi
+	rm -f "$errfile"
+	return "$status"
+}
+
 # Same NIP-46 pairing session (and pending offer) install's optional
 # pair_owner_signer_now step creates (_common.sh's
 # yunohost_mcp_approve_session_file/yunohost_mcp_approve_offer_file) - the
@@ -745,28 +769,35 @@ set__armada_relays() {
 }
 
 run__do_generate_bot_key() {
-	local npub
-	npub="$(_ymcp_armada_tool generate-key "$data_dir/armada-bot.key")" || \
-		ynh_die "Could not generate a bot key - see the error above"
+	_ymcp_armada_tool_capture generate-key "$data_dir/armada-bot.key" || \
+		ynh_die "Could not generate a bot key - reload this panel and check Last Armada error below for details"
+	local npub="$_YMCP_OUT"
 	yunohost_mcp_fix_armada_credential_perms "$data_dir/armada-bot.key"
 	ynh_print_info "Generated a new Armada bot key: $npub. Any prior Guestbook Join no longer applies to this identity - run armada_join again before announcing."
 }
 
 run__do_set_invite() {
 	[ -n "${armada_invite_url:-}" ] || ynh_die "Paste the community invite URL before saving"
-	_ymcp_armada_tool set-invite "$data_dir/armada-community.invite" "$armada_invite_url" \
-		|| ynh_die "Could not save the invite - see the error above"
+	_ymcp_armada_tool_capture set-invite "$data_dir/armada-community.invite" "$armada_invite_url" || \
+		ynh_die "Could not save the invite - reload this panel and check Last Armada error below for details"
 	yunohost_mcp_fix_armada_credential_perms "$data_dir/armada-community.invite"
 	ynh_print_info "Armada community invite saved"
 }
 
 run__do_join() {
-	[ -f "$data_dir/armada-bot.key" ] || ynh_die "Generate a bot key above first"
-	[ -f "$data_dir/armada-community.invite" ] || ynh_die "Set a community invite above first"
+	if [ ! -f "$data_dir/armada-bot.key" ]; then
+		printf '%s [join] Generate a bot key above first\n' "$(date -Iseconds)" > "$data_dir/armada-last-error.log"
+		ynh_die "Generate a bot key above first"
+	fi
+	if [ ! -f "$data_dir/armada-community.invite" ]; then
+		printf '%s [join] Set a community invite above first\n' "$(date -Iseconds)" > "$data_dir/armada-last-error.log"
+		ynh_die "Set a community invite above first"
+	fi
 
-	local result status community_id verified
-	result="$(_ymcp_armada_tool join "$data_dir/armada-bot.key" "$data_dir/armada-community.invite")" \
-		|| ynh_die "Join failed - reload this panel and check Last Armada error below for details"
+	_ymcp_armada_tool_capture join "$data_dir/armada-bot.key" "$data_dir/armada-community.invite" || \
+		ynh_die "Join failed - reload this panel and check Last Armada error below for details"
+
+	local result="$_YMCP_OUT" status community_id verified
 	status="${result%%:*}"
 	community_id="${result#*:}"; community_id="${community_id%:*}"
 	verified="${result##*:}"
