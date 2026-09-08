@@ -282,9 +282,21 @@ _ymcp_armada_tool() {
 	# since it's inside a command substitution, silently producing
 	# npub="" instead of a real key. Root can always sudo -u to any user
 	# without a password, so this needs no sudoers configuration either.
-	sudo -u "$app" -- "$install_dir/venv/bin/python3" - "$@" <<'PYEOF'
+	sudo -u "$app" -- "$install_dir/venv/bin/python3" - "$data_dir" "$@" <<'PYEOF'
+import datetime
 import sys
 from pathlib import Path
+
+# Always the first argv element (see the bash wrapper above) - kept
+# separate from individual cmd_* signatures so their own argument counts
+# don't change. Used only by the dispatcher's own catch-all below, to
+# persist the last failure somewhere the config panel can show directly -
+# see get__armada_last_error/run__do_clear_armada_error. YunoHost's own
+# operation-log system proved unreliable for this on a busy host: logs
+# for a given operation name were found to contain a completely unrelated
+# app's trace, apparently from real log-file collisions under concurrent
+# app installs - not something worth depending on for basic diagnosis.
+_DATA_DIR = sys.argv[1]
 
 
 def cmd_key_status(path: str) -> None:
@@ -384,21 +396,38 @@ COMMANDS = {
     "join": cmd_join,
 }
 
-_cmd, *_args = sys.argv[1:]
+_ERROR_FILE = Path(_DATA_DIR, "armada-last-error.log")
+
+
+def _record_error(message: str) -> None:
+    try:
+        _ERROR_FILE.write_text(f"{datetime.datetime.now().isoformat(timespec='seconds')} [{_cmd}] {message}\n")
+    except Exception:  # noqa: BLE001 - recording the error must never itself crash the command
+        pass
+
+
+_cmd, *_args = sys.argv[2:]
 try:
     COMMANDS[_cmd](*_args)
-except SystemExit:
+except SystemExit as e:
+    # A cmd_* function's own clean sys.exit(message) for an already-known
+    # error case (bad key file, invalid invite URL, ...) - still worth
+    # recording, same as an unanticipated crash below.
+    if e.code not in (None, 0):
+        _record_error(str(e.code))
     raise
 except Exception as exc:  # noqa: BLE001 - catch-all so an unanticipated
-    # failure (a permission error under ynh_exec_as, a sudo/stdin
-    # surprise, ...) always exits with a readable one-line message
-    # instead of a raw traceback and an opaque actions/ 500 with no
-    # operation log anywhere (confirmed live twice now: neither
-    # operations_list nor journal_query on yunohost-api surface anything
-    # but the bare 500 status line for a crashed config-panel action).
-    # Individual cmd_* functions still raise their own clean sys.exit for
-    # already-known error cases; this only catches what they don't.
-    sys.exit(f"{type(exc).__name__}: {exc}")
+    # failure (a permission error, a sudo/stdin surprise, ...) always
+    # exits with a readable one-line message, persisted where the config
+    # panel can show it directly. YunoHost's own operation-log system
+    # proved unreliable for this on a busy host - see _DATA_DIR's
+    # docstring above - so this is the only diagnostic path actually
+    # worth trusting here.
+    message = f"{type(exc).__name__}: {exc}"
+    _record_error(message)
+    sys.exit(message)
+else:
+    _ERROR_FILE.unlink(missing_ok=True)
 PYEOF
 }
 
@@ -667,6 +696,32 @@ ask:
 EOF
 }
 
+# Surfaces _ymcp_armada_tool's own last recorded failure directly in the
+# panel - see the dispatcher's _record_error in that tool for why this
+# exists instead of relying on YunoHost's operation logs (confirmed
+# unreliable for this on a busy host: a log fetched by its own exact,
+# freshly-observed name contained a completely unrelated app's trace).
+get__armada_last_error() {
+	local error_file="$data_dir/armada-last-error.log"
+	if [ -s "$error_file" ]; then
+		local content
+		content="$(cat "$error_file")"
+		cat <<EOF
+ask:
+  en: |
+    $content
+  fr: |
+    $content
+EOF
+	else
+		cat <<'EOF'
+ask:
+  en: "None - the last Armada action (key generation, invite, or join) succeeded."
+  fr: "Aucune - la dernière action Armada (génération de clé, invitation ou adhésion) a réussi."
+EOF
+	fi
+}
+
 #=================================================
 # SETTERS
 #=================================================
@@ -711,7 +766,7 @@ run__do_join() {
 
 	local result status community_id verified
 	result="$(_ymcp_armada_tool join "$data_dir/armada-bot.key" "$data_dir/armada-community.invite")" \
-		|| ynh_die "Join failed - see the error above"
+		|| ynh_die "Join failed - reload this panel and check Last Armada error below for details"
 	status="${result%%:*}"
 	community_id="${result#*:}"; community_id="${community_id%:*}"
 	verified="${result##*:}"

@@ -334,6 +334,14 @@ services = []
         help.en = "Publishes the bot's Guestbook Join using the key and invite above - required once before any announcement can be posted. Requires both to be configured first."
         help.fr = "Publie l'adhésion au Guestbook du bot avec la clé et l'invitation ci-dessus - requis une fois avant qu'une annonce puisse être publiée. Nécessite que les deux soient configurées au préalable."
 
+        [armada.credentials.armada_last_error]
+        ask.en = "Last Armada error"
+        ask.fr = "Dernière erreur Armada"
+        type = "alert"
+        style = "danger"
+        help.en = "The exact failure from the most recent key generation, invite, or join action - reload this panel after a failed action to see it here. Clears automatically the next time an action succeeds."
+        help.fr = "L'échec exact de la dernière action de génération de clé, d'invitation ou d'adhésion - rechargez ce panneau après un échec pour le voir ici. S'efface automatiquement dès qu'une action réussit."
+
 [owner]
 name.en = "Owner approval"
 name.fr = "Approbation du propriétaire"
