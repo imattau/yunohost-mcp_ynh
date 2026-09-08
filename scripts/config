@@ -274,7 +274,15 @@ _ymcp_armada_tool() {
 	# (conf/systemd.service's User=__APP__) - reading them as root here
 	# fails that check even though root can see the bytes at the OS level.
 	# Confirmed live: cmd_join died with "unexpected owner" before this fix.
-	ynh_exec_as "$app" "$install_dir/venv/bin/python3" - "$@" <<'PYEOF'
+	#
+	# Plain `sudo -u`, not the ynh_exec_as helper: confirmed live that
+	# ynh_exec_as is not actually loaded for this app's declared
+	# helpers_version (2.1) on a real install - "ynh_exec_as: command not
+	# found", captured as empty output rather than a script-level error
+	# since it's inside a command substitution, silently producing
+	# npub="" instead of a real key. Root can always sudo -u to any user
+	# without a password, so this needs no sudoers configuration either.
+	sudo -u "$app" -- "$install_dir/venv/bin/python3" - "$@" <<'PYEOF'
 import sys
 from pathlib import Path
 
