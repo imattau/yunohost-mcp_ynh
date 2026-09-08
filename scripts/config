@@ -377,7 +377,20 @@ COMMANDS = {
 }
 
 _cmd, *_args = sys.argv[1:]
-COMMANDS[_cmd](*_args)
+try:
+    COMMANDS[_cmd](*_args)
+except SystemExit:
+    raise
+except Exception as exc:  # noqa: BLE001 - catch-all so an unanticipated
+    # failure (a permission error under ynh_exec_as, a sudo/stdin
+    # surprise, ...) always exits with a readable one-line message
+    # instead of a raw traceback and an opaque actions/ 500 with no
+    # operation log anywhere (confirmed live twice now: neither
+    # operations_list nor journal_query on yunohost-api surface anything
+    # but the bare 500 status line for a crashed config-panel action).
+    # Individual cmd_* functions still raise their own clean sys.exit for
+    # already-known error cases; this only catches what they don't.
+    sys.exit(f"{type(exc).__name__}: {exc}")
 PYEOF
 }
 
