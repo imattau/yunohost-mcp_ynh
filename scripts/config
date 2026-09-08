@@ -322,10 +322,8 @@ def cmd_join(bot_key_path: str, invite_path: str) -> None:
     import asyncio
     import time
 
-    from yunohost_mcp.concord_bundle import ConcordBundleError
     from yunohost_mcp.concord_credentials import CredentialFileError, load_bot_private_key, read_credential_file
-    from yunohost_mcp.concord_invite_event import ConcordInviteEventError
-    from yunohost_mcp.concord_invites import ConcordInviteError, load_invite_bundle
+    from yunohost_mcp.concord_invites import load_invite_bundle
     from yunohost_mcp.concord_join import publish_join
     from yunohost_mcp.concord_transport import fetch_invite_events, publish_signed_event
 
@@ -349,8 +347,15 @@ def cmd_join(bot_key_path: str, invite_path: str) -> None:
 
     try:
         result = asyncio.run(run())
-    except (ConcordBundleError, ConcordInviteError, ConcordInviteEventError, ValueError) as exc:
-        sys.exit(str(exc))
+    except Exception as exc:  # noqa: BLE001 - this is a config-panel action's
+        # last line of defense: an uncaught exception here crashes with no
+        # operation log the webadmin surfaces (confirmed live - a raw
+        # traceback shows up only as an opaque actions/ 500, nothing in
+        # `yunohost log list`/operations_list). A relay timeout, DNS
+        # failure, or real protocol mismatch against an actual community
+        # invite is exactly as likely as the four narrower error types
+        # below, and deserves the same clean, readable failure.
+        sys.exit(f"{type(exc).__name__}: {exc}")
     print(f"{result.status}:{result.community_id}:{result.verified}")
 
 
