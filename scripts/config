@@ -259,6 +259,114 @@ _ymcp_fix_perms() {
 	chmod 640 "$1"
 }
 
+# Armada bot key / community invite management for the config panel's
+# Armada tab - a small dispatcher in the same shape as
+# _ymcp_identity_tool above, run inside the app's own venv so it can reuse
+# yunohost_mcp's own key loading and invite-URL parsing rather than
+# reimplementing either in bash.
+_ymcp_armada_tool() {
+	"$install_dir/venv/bin/python3" - "$@" <<'PYEOF'
+import sys
+from pathlib import Path
+
+
+def cmd_key_status(path: str) -> None:
+    p = Path(path)
+    if not p.exists():
+        print("absent")
+        return
+    from yunohost_mcp.auth.signing import ClientIdentity, KeyLoadError
+
+    try:
+        identity = ClientIdentity.from_key_string(p.read_text().strip())
+    except KeyLoadError as exc:
+        sys.exit(f"existing bot key file is not a valid key: {exc}")
+    print(f"present:{identity.npub}")
+
+
+def cmd_generate_key(path: str) -> None:
+    from yunohost_mcp.bridge import BridgeConfigError, generate_key
+
+    p = Path(path)
+    p.unlink(missing_ok=True)
+    try:
+        identity = generate_key(p)
+    except BridgeConfigError as exc:
+        sys.exit(str(exc))
+    print(identity.npub)
+
+
+def cmd_invite_status(path: str) -> None:
+    print("present" if Path(path).exists() else "absent")
+
+
+def cmd_set_invite(path: str, url: str) -> None:
+    from yunohost_mcp.concord_invites import ConcordInviteError, parse_invite_url
+
+    try:
+        parse_invite_url(url)
+    except ConcordInviteError as exc:
+        sys.exit(f"invalid invite URL: {exc}")
+    Path(path).write_text(url.strip() + "\n")
+    print("invite saved")
+
+
+def cmd_join(bot_key_path: str, invite_path: str) -> None:
+    """Publish the bot's Guestbook Join directly - the same library calls
+    yunohost_mcp.server's armada_join tool makes (load key, load invite
+    bundle, publish_join), run here without going through a running MCP
+    session. Consistent with cmd_grant/cmd_revoke above: config-panel
+    actions in this package are already administrator-trusted and
+    unaudited (they write identity.toml directly too), so bypassing the
+    MCP audit log for this one action is not a new gap."""
+    import asyncio
+    import time
+
+    from yunohost_mcp.concord_bundle import ConcordBundleError
+    from yunohost_mcp.concord_credentials import CredentialFileError, load_bot_private_key, read_credential_file
+    from yunohost_mcp.concord_invite_event import ConcordInviteEventError
+    from yunohost_mcp.concord_invites import ConcordInviteError, load_invite_bundle
+    from yunohost_mcp.concord_join import publish_join
+    from yunohost_mcp.concord_transport import fetch_invite_events, publish_signed_event
+
+    try:
+        bot_key = load_bot_private_key(Path(bot_key_path))
+        invite_url = read_credential_file(Path(invite_path), label="Armada invite")
+    except CredentialFileError as exc:
+        sys.exit(str(exc))
+
+    async def run():
+        async def invite_fetcher(pubkey, relays):
+            return await fetch_invite_events(pubkey, relays, timeout_seconds=30)
+
+        async def join_publisher(event, relays):
+            return await publish_signed_event(event, relays, timeout_seconds=30)
+
+        bundle = await load_invite_bundle(invite_url, fetcher=invite_fetcher)
+        return await publish_join(
+            bundle=bundle, bot_key=bot_key, created_at=int(time.time()), publisher=join_publisher
+        )
+
+    try:
+        result = asyncio.run(run())
+    except (ConcordBundleError, ConcordInviteError, ConcordInviteEventError, ValueError) as exc:
+        sys.exit(str(exc))
+    print(f"{result.status}:{result.community_id}:{result.verified}")
+
+
+COMMANDS = {
+    "key-status": cmd_key_status,
+    "generate-key": cmd_generate_key,
+    "invite-status": cmd_invite_status,
+    "set-invite": cmd_set_invite,
+    "join": cmd_join,
+}
+
+_cmd, *_args = sys.argv[1:]
+COMMANDS[_cmd](*_args)
+PYEOF
+}
+
 # Same NIP-46 pairing session (and pending offer) install's optional
 # pair_owner_signer_now step creates (_common.sh's
 # yunohost_mcp_approve_session_file/yunohost_mcp_approve_offer_file) - the
@@ -437,9 +545,145 @@ $(echo "$summary" | sed 's/^/    /')
 EOF
 }
 
+get__armada_env() {
+	# Settings share one file (yunohost_mcp_set_armada_settings writes all
+	# three together) - read it once per getter rather than re-parsing
+	# three times, and fall back to upstream Settings' own defaults
+	# (disabled, no relays) when it's absent, same as get__identity_backend
+	# falling back to "toml".
+	[ -f "$data_dir/armada.env" ] || return 0
+	cat "$data_dir/armada.env"
+}
+
+get__armada_enabled() {
+	local v
+	v="$(get__armada_env | sed -n 's/^YUNOHOST_MCP_ARMADA_ENABLED=//p')"
+	echo "${v:-false}"
+}
+
+get__armada_auto_announce() {
+	local v
+	v="$(get__armada_env | sed -n 's/^YUNOHOST_MCP_ARMADA_AUTO_ANNOUNCE=//p')"
+	echo "${v:-false}"
+}
+
+get__armada_relays() {
+	get__armada_env | sed -n 's/^YUNOHOST_MCP_ARMADA_RELAYS=//p'
+}
+
+get__armada_bot_key_status() {
+	local status npub
+	status="$(_ymcp_armada_tool key-status "$data_dir/armada-bot.key")" || \
+		{ printf 'ask:\n  en: "Could not read the bot key file - see the error above."\n'; return; }
+	case "$status" in
+		absent)
+			cat <<'EOF'
+ask:
+  en: "Not yet generated - click Generate bot key below before enabling Armada."
+  fr: "Pas encore générée - cliquez sur Générer une clé de bot ci-dessous avant d'activer Armada."
+EOF
+			;;
+		present:*)
+			npub="${status#present:}"
+			cat <<EOF
+ask:
+  en: "Present: $npub"
+  fr: "Présente : $npub"
+EOF
+			;;
+	esac
+}
+
+get__armada_invite_status() {
+	local status
+	status="$(_ymcp_armada_tool invite-status "$data_dir/armada-community.invite")"
+	if [ "$status" = "present" ]; then
+		cat <<'EOF'
+ask:
+  en: "Configured."
+  fr: "Configurée."
+EOF
+	else
+		cat <<'EOF'
+ask:
+  en: "Not yet configured - paste an invite URL below and click Set invite."
+  fr: "Pas encore configurée - collez une URL d'invitation ci-dessous et cliquez sur Définir l'invitation."
+EOF
+	fi
+}
+
+get__armada_status() {
+	local enabled auto_announce key_status invite_status
+	enabled="$(get__armada_enabled)"
+	auto_announce="$(get__armada_auto_announce)"
+	key_status="$(_ymcp_armada_tool key-status "$data_dir/armada-bot.key" 2>/dev/null || echo absent)"
+	invite_status="$(_ymcp_armada_tool invite-status "$data_dir/armada-community.invite")"
+	cat <<EOF
+ask:
+  en: |
+    Enabled: $enabled — Auto-announce after publish: $auto_announce
+    Bot key: ${key_status%%:*} — Community invite: $invite_status
+  fr: |
+    Activé : $enabled — Annonce automatique après publication : $auto_announce
+    Clé du bot : ${key_status%%:*} — Invitation de communauté : $invite_status
+EOF
+}
+
 #=================================================
 # SETTERS
 #=================================================
+
+set__armada_enabled() {
+	yunohost_mcp_set_armada_settings "$armada_enabled" "$(get__armada_auto_announce)" "$(get__armada_relays)"
+	ynh_systemctl --service="$app" --action="restart" --log_path="systemd" --wait_until="Uvicorn running on"
+	ynh_print_info "Armada integration ${armada_enabled}"
+}
+
+set__armada_auto_announce() {
+	yunohost_mcp_set_armada_settings "$(get__armada_enabled)" "$armada_auto_announce" "$(get__armada_relays)"
+	ynh_systemctl --service="$app" --action="restart" --log_path="systemd" --wait_until="Uvicorn running on"
+	ynh_print_info "Armada auto-announce set to $armada_auto_announce"
+}
+
+set__armada_relays() {
+	yunohost_mcp_set_armada_settings "$(get__armada_enabled)" "$(get__armada_auto_announce)" "$armada_relays"
+	ynh_systemctl --service="$app" --action="restart" --log_path="systemd" --wait_until="Uvicorn running on"
+	ynh_print_info "Armada relay list updated"
+}
+
+run__do_generate_bot_key() {
+	local npub
+	npub="$(_ymcp_armada_tool generate-key "$data_dir/armada-bot.key")" || \
+		ynh_die "Could not generate a bot key - see the error above"
+	yunohost_mcp_fix_armada_credential_perms "$data_dir/armada-bot.key"
+	ynh_print_info "Generated a new Armada bot key: $npub. Any prior Guestbook Join no longer applies to this identity - run armada_join again before announcing."
+}
+
+run__do_set_invite() {
+	[ -n "${armada_invite_url:-}" ] || ynh_die "Paste the community invite URL before saving"
+	_ymcp_armada_tool set-invite "$data_dir/armada-community.invite" "$armada_invite_url" \
+		|| ynh_die "Could not save the invite - see the error above"
+	yunohost_mcp_fix_armada_credential_perms "$data_dir/armada-community.invite"
+	ynh_print_info "Armada community invite saved"
+}
+
+run__do_join() {
+	[ -f "$data_dir/armada-bot.key" ] || ynh_die "Generate a bot key above first"
+	[ -f "$data_dir/armada-community.invite" ] || ynh_die "Set a community invite above first"
+
+	local result status community_id verified
+	result="$(_ymcp_armada_tool join "$data_dir/armada-bot.key" "$data_dir/armada-community.invite")" \
+		|| ynh_die "Join failed - see the error above"
+	status="${result%%:*}"
+	community_id="${result#*:}"; community_id="${community_id%:*}"
+	verified="${result##*:}"
+
+	if [ "$verified" = "True" ]; then
+		ynh_print_info "Joined community $community_id and confirmed in the Guestbook roster ($status)."
+	else
+		ynh_print_info "Published a join for community $community_id, but could not confirm it in the roster yet ($status) - relays may just be slow to propagate; check again shortly."
+	fi
+}
 
 run__do_group_assign() {
 	[ "$(get__identity_backend)" = "yunohost_groups" ] || \

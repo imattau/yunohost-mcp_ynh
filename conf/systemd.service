@@ -39,6 +39,10 @@ EnvironmentFile=-__DATA_DIR__/identity-backend.env
 # Polypack's YunoHost-allocated port during install, upgrade, restore, or an
 # explicit config-panel refresh. It is intentionally loopback-only.
 EnvironmentFile=-__DATA_DIR__/polypack.env
+# Optional Armada/Concord announcement integration (config panel's Armada
+# tab). Absent until an admin configures it there - disabled by default,
+# same as upstream yunohost_mcp.config.Settings.
+EnvironmentFile=-__DATA_DIR__/armada.env
 # Owner co-signing (v0.5.0+, upstream owner-approval-plan.md's `solo`
 # profile): pinned explicitly to the install-time admin_npub, rather than
 # left to fall back on "whichever single identity.toml entry holds the

@@ -143,6 +143,37 @@ yunohost_mcp_set_identity_backend() {
 	chmod 640 "$data_dir/identity-backend.env"
 }
 
+# Optional Armada/Concord integration (config panel's Armada tab). The bot
+# key and community invite are separate files, not part of this one - see
+# yunohost_mcp_fix_armada_credential_perms below for why they need a
+# stricter mode than this settings file. Paths are always fixed under
+# $data_dir (never admin-editable): conf/systemd.service already sandboxes
+# the service to ReadWritePaths=__DATA_DIR__, so anywhere else could never
+# actually be written by it.
+yunohost_mcp_set_armada_settings() {
+	local enabled="${1:-false}" auto_announce="${2:-false}" relays="${3:-}"
+	case "$enabled" in true|false) ;; *) ynh_die "armada_enabled must be true or false" ;; esac
+	case "$auto_announce" in true|false) ;; *) ynh_die "armada_auto_announce must be true or false" ;; esac
+	cat > "$data_dir/armada.env" <<EOF
+YUNOHOST_MCP_ARMADA_ENABLED=$enabled
+YUNOHOST_MCP_ARMADA_AUTO_ANNOUNCE=$auto_announce
+YUNOHOST_MCP_ARMADA_RELAYS=$relays
+YUNOHOST_MCP_ARMADA_BOT_KEY_PATH=$data_dir/armada-bot.key
+YUNOHOST_MCP_ARMADA_COMMUNITY_INVITE_PATH=$data_dir/armada-community.invite
+EOF
+	chown "$app:$app" "$data_dir/armada.env"
+	chmod 640 "$data_dir/armada.env"
+}
+
+# The bot key and community invite are read by
+# concord_credentials.read_credential_file, which rejects any group/other
+# bit at all (unlike identity.toml/policy.toml's ordinary 640) - so these
+# need their own, stricter fix rather than reusing _ymcp_fix_perms.
+yunohost_mcp_fix_armada_credential_perms() {
+	chown "$app:$app" "$1"
+	chmod 600 "$1"
+}
+
 # The frontend is intentionally unprivileged.  Older releases ran it as root,
 # so their runtime SQLite/audit files may still be root-owned; chmod() on an
 # existing root-owned file fails after the privilege-boundary migration.

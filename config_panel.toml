@@ -242,6 +242,98 @@ services = []
         pattern.regexp = '^[0-9a-f]{64}$'
         pattern.error = "Must be a 64-char hex event id"
 
+[armada]
+name.en = "Armada announcements"
+name.fr = "Annonces Armada"
+services = []
+
+    [armada.settings]
+    name.en = "Settings"
+    name.fr = "Paramètres"
+    help.en = "Optional: post catalogue-publish announcements to a Concord community channel matching the package repository name. Disabled and best-effort by default - a failed or unconfigured announcement never blocks catalog_publish itself."
+    help.fr = "Facultatif : publie des annonces de publication de catalogue dans un canal de communauté Concord correspondant au nom du dépôt du paquet. Désactivé et à effort limité par défaut - une annonce échouée ou non configurée ne bloque jamais catalog_publish lui-même."
+
+        [armada.settings.armada_status]
+        ask.en = "Current status"
+        ask.fr = "État actuel"
+        type = "alert"
+        style = "info"
+        # Filled dynamically by get__armada_status in scripts/config.
+
+        [armada.settings.armada_enabled]
+        ask.en = "Enable Armada integration"
+        ask.fr = "Activer l'intégration Armada"
+        type = "boolean"
+        default = false
+        bind = "null"
+        help.en = "Requires a bot key and community invite below before it can actually announce or join."
+        help.fr = "Nécessite une clé de bot et une invitation de communauté ci-dessous pour pouvoir réellement annoncer ou rejoindre."
+
+        [armada.settings.armada_auto_announce]
+        ask.en = "Announce automatically after every successful catalog_publish"
+        ask.fr = "Annoncer automatiquement après chaque catalog_publish réussi"
+        type = "boolean"
+        default = false
+        bind = "null"
+
+        [armada.settings.armada_relays]
+        ask.en = "Relays (comma-separated, optional)"
+        ask.fr = "Relais (séparés par des virgules, facultatif)"
+        type = "string"
+        optional = true
+        bind = "null"
+        example = "wss://relay.example.com, wss://another-relay.example"
+
+    [armada.credentials]
+    name.en = "Bot key and community invite"
+    name.fr = "Clé du bot et invitation de communauté"
+    help.en = "File-backed credentials, never exposed through MCP calls or logs. Generating a new bot key changes which identity announcements are signed with - any prior Guestbook Join no longer applies, so armada_join needs to be run again afterwards."
+    help.fr = "Identifiants stockés dans des fichiers, jamais exposés via les appels MCP ou les journaux. Générer une nouvelle clé de bot change l'identité avec laquelle les annonces sont signées - toute adhésion au Guestbook précédente ne s'applique plus, il faut donc relancer armada_join ensuite."
+
+        [armada.credentials.armada_bot_key_status]
+        ask.en = "Bot key"
+        ask.fr = "Clé du bot"
+        type = "alert"
+        style = "info"
+        # Filled dynamically by get__armada_bot_key_status in scripts/config.
+
+        [armada.credentials.do_generate_bot_key]
+        ask.en = "Generate bot key"
+        ask.fr = "Générer une clé de bot"
+        type = "button"
+        style = "danger"
+        help.en = "Replaces any existing bot key immediately - see the warning above about re-joining afterwards."
+        help.fr = "Remplace immédiatement toute clé de bot existante - voir l'avertissement ci-dessus concernant le fait de devoir rejoindre à nouveau ensuite."
+
+        [armada.credentials.armada_invite_status]
+        ask.en = "Community invite"
+        ask.fr = "Invitation de communauté"
+        type = "alert"
+        style = "info"
+        # Filled dynamically by get__armada_invite_status in scripts/config.
+
+        [armada.credentials.armada_invite_url]
+        ask.en = "Invite URL"
+        ask.fr = "URL d'invitation"
+        type = "string"
+        optional = true
+        bind = "null"
+        example = "https://concord.example/invite/naddr1...#fragment"
+
+        [armada.credentials.do_set_invite]
+        ask.en = "Set invite"
+        ask.fr = "Définir l'invitation"
+        type = "button"
+        style = "success"
+
+        [armada.credentials.do_join]
+        ask.en = "Join community"
+        ask.fr = "Rejoindre la communauté"
+        type = "button"
+        style = "success"
+        help.en = "Publishes the bot's Guestbook Join using the key and invite above - required once before any announcement can be posted. Requires both to be configured first."
+        help.fr = "Publie l'adhésion au Guestbook du bot avec la clé et l'invitation ci-dessus - requis une fois avant qu'une annonce puisse être publiée. Nécessite que les deux soient configurées au préalable."
+
 [owner]
 name.en = "Owner approval"
 name.fr = "Approbation du propriétaire"
