@@ -339,8 +339,13 @@ services = []
         ask.fr = "Dernière erreur Armada"
         type = "alert"
         style = "danger"
-        help.en = "The exact failure from the most recent key generation, invite, or join action - reload this panel after a failed action to see it here. Clears automatically the next time an action succeeds."
-        help.fr = "L'échec exact de la dernière action de génération de clé, d'invitation ou d'adhésion - rechargez ce panneau après un échec pour le voir ici. S'efface automatiquement dès qu'une action réussit."
+        # Filled dynamically by get__armada_last_error in scripts/config -
+        # the exact failure from the most recent key generation, invite, or
+        # join action; reload this panel after a failed action to see it.
+        # Clears automatically the next time an action succeeds. AlertOption
+        # has no `help` property (yunohost core's form.py: only
+        # ButtonOption/BaseInputOption define one, and every Option model
+        # forbids extra fields) - don't add one here again.
 
 [owner]
 name.en = "Owner approval"
