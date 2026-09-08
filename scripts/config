@@ -265,7 +265,16 @@ _ymcp_fix_perms() {
 # yunohost_mcp's own key loading and invite-URL parsing rather than
 # reimplementing either in bash.
 _ymcp_armada_tool() {
-	"$install_dir/venv/bin/python3" - "$@" <<'PYEOF'
+	# Run as $app, not root: concord_credentials.read_credential_file
+	# requires a credential file's owner to be either root or the *reading
+	# process's own* uid - it's an anti-hijack check, not a permission
+	# check, so it doesn't treat root as automatically trusted to read
+	# anything. armada-bot.key/armada-community.invite are (correctly)
+	# owned by $app to match the actual systemd service's own runtime user
+	# (conf/systemd.service's User=__APP__) - reading them as root here
+	# fails that check even though root can see the bytes at the OS level.
+	# Confirmed live: cmd_join died with "unexpected owner" before this fix.
+	ynh_exec_as "$app" "$install_dir/venv/bin/python3" - "$@" <<'PYEOF'
 import sys
 from pathlib import Path
 
