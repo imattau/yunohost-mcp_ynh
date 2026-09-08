@@ -687,7 +687,15 @@ EOF
 
 get__armada_invite_status() {
 	local status
-	status="$(_ymcp_armada_tool invite-status "$data_dir/armada-community.invite")"
+	# Every getter in this section is re-run before *any* button click in
+	# it, not just this field's own reload - an unguarded failure here
+	# (matching key-status's existing `|| echo absent` right below) would
+	# abort the whole pre-action re-ask under set -e, killing e.g. Join
+	# community before run__do_join ever runs, with nothing recorded to
+	# armada-last-error.log since that crash is in a different function
+	# entirely. Confirmed live: this was the actual explanation for a
+	# YunoHost-reported failure with an empty error log.
+	status="$(_ymcp_armada_tool invite-status "$data_dir/armada-community.invite" 2>/dev/null || echo absent)"
 	if [ "$status" = "present" ]; then
 		cat <<'EOF'
 ask:
@@ -708,7 +716,7 @@ get__armada_status() {
 	[ "$(get__armada_enabled)" = "1" ] && enabled="yes" || enabled="no"
 	[ "$(get__armada_auto_announce)" = "1" ] && auto_announce="yes" || auto_announce="no"
 	key_status="$(_ymcp_armada_tool key-status "$data_dir/armada-bot.key" 2>/dev/null || echo absent)"
-	invite_status="$(_ymcp_armada_tool invite-status "$data_dir/armada-community.invite")"
+	invite_status="$(_ymcp_armada_tool invite-status "$data_dir/armada-community.invite" 2>/dev/null || echo absent)"
 	cat <<EOF
 ask:
   en: |
